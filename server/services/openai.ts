@@ -117,8 +117,8 @@ export async function analyzeCropImage(base64Image: string, mimeType: string = '
         throw new Error("Invalid response structure from Gemini");
       }
 
-    } catch (error) {
-      console.error("Gemini crop analysis failed:", error);
+    } catch (error: any) {
+      console.error("Gemini crop analysis failed:", error?.message || error, "status:", error?.status);
     }
   }
 
