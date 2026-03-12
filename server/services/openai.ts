@@ -51,7 +51,7 @@ export interface ChatResponse {
   actionable?: boolean;
 }
 
-export async function analyzeCropImage(base64Image: string): Promise<CropAnalysisResult> {
+export async function analyzeCropImage(base64Image: string, mimeType: string = 'image/jpeg'): Promise<CropAnalysisResult> {
   // Try Gemini first if available
   if (genAI) {
     try {
@@ -72,32 +72,24 @@ export async function analyzeCropImage(base64Image: string): Promise<CropAnalysi
 
       const contents = [
         {
-          inlineData: {
-            data: base64Image,
-            mimeType: "image/jpeg",
-          },
+          role: "user",
+          parts: [
+            {
+              inlineData: {
+                data: base64Image,
+                mimeType: mimeType,
+              },
+            },
+            { text: userPrompt },
+          ],
         },
-        userPrompt,
       ];
 
       const response = await genAI.models.generateContent({
-        model: "gemini-2.5-pro",
+        model: "gemini-1.5-flash",
         config: {
           systemInstruction: systemPrompt,
           responseMimeType: "application/json",
-          responseSchema: {
-            type: "object",
-            properties: {
-              cropType: { type: "string" },
-              diagnosis: { type: "string" },
-              recommendations: { type: "string" },
-              status: { type: "string", enum: ["healthy", "disease_detected", "needs_attention"] },
-              confidence: { type: "string", enum: ["high", "medium", "low"] },
-              treatmentSteps: { type: "array", items: { type: "string" } },
-              preventiveMeasures: { type: "array", items: { type: "string" } }
-            },
-            required: ["cropType", "diagnosis", "recommendations", "status", "confidence"]
-          }
         },
         contents: contents
       });
@@ -193,7 +185,7 @@ export async function analyzeCropImage(base64Image: string): Promise<CropAnalysi
   };
 }
 
-export async function analyzeSoilImage(base64Image: string): Promise<SoilAnalysisResult> {
+export async function analyzeSoilImage(base64Image: string, mimeType: string = 'image/jpeg'): Promise<SoilAnalysisResult> {
   // Try Gemini first if available
   if (genAI) {
     try {
@@ -215,33 +207,24 @@ export async function analyzeSoilImage(base64Image: string): Promise<SoilAnalysi
 
       const contents = [
         {
-          inlineData: {
-            data: base64Image,
-            mimeType: "image/jpeg",
-          },
+          role: "user",
+          parts: [
+            {
+              inlineData: {
+                data: base64Image,
+                mimeType: mimeType,
+              },
+            },
+            { text: userPrompt },
+          ],
         },
-        userPrompt,
       ];
 
       const response = await genAI.models.generateContent({
-        model: "gemini-2.5-pro",
+        model: "gemini-1.5-flash",
         config: {
           systemInstruction: systemPrompt,
           responseMimeType: "application/json",
-          responseSchema: {
-            type: "object",
-            properties: {
-              soilType: { type: "string" },
-              diagnosis: { type: "string" },
-              recommendations: { type: "string" },
-              status: { type: "string", enum: ["healthy", "needs_attention", "poor"] },
-              confidence: { type: "string", enum: ["high", "medium", "low"] },
-              phLevel: { type: "string" },
-              fertility: { type: "string" },
-              improvements: { type: "array", items: { type: "string" } }
-            },
-            required: ["soilType", "diagnosis", "recommendations", "status", "confidence"]
-          }
         },
         contents: contents
       });
@@ -296,21 +279,17 @@ export async function generateChatResponse(message: string, userRegion?: string)
       }`;
 
       const response = await genAI.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-1.5-flash",
         config: {
           systemInstruction: systemPrompt,
           responseMimeType: "application/json",
-          responseSchema: {
-            type: "object",
-            properties: {
-              response: { type: "string" },
-              relatedTopics: { type: "array", items: { type: "string" } },
-              actionable: { type: "boolean" }
-            },
-            required: ["response", "relatedTopics", "actionable"]
-          }
         },
-        contents: message
+        contents: [
+          {
+            role: "user",
+            parts: [{ text: message }],
+          },
+        ]
       });
 
       console.log("Gemini Chat API response received");

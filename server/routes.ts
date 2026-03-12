@@ -27,12 +27,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Convert buffer to base64
       const base64Image = req.file.buffer.toString('base64');
+      const mimeType = req.file.mimetype || 'image/jpeg';
       
       let analysisResult;
       let resultData;
 
       if (analysisType === 'crop') {
-        analysisResult = await analyzeCropImage(base64Image);
+        analysisResult = await analyzeCropImage(base64Image, mimeType);
         resultData = {
           userId,
           imageUrl: `data:${req.file.mimetype};base64,${base64Image}`,
@@ -48,7 +49,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         };
       } else if (analysisType === 'soil') {
-        analysisResult = await analyzeSoilImage(base64Image);
+        analysisResult = await analyzeSoilImage(base64Image, mimeType);
         resultData = {
           userId,
           imageUrl: `data:${req.file.mimetype};base64,${base64Image}`,
