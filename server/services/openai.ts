@@ -86,7 +86,7 @@ export async function analyzeCropImage(base64Image: string, mimeType: string = '
       ];
 
       const response = await genAI.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-2.0-flash",
         config: {
           systemInstruction: systemPrompt,
           responseMimeType: "application/json",
@@ -221,7 +221,7 @@ export async function analyzeSoilImage(base64Image: string, mimeType: string = '
       ];
 
       const response = await genAI.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-2.0-flash",
         config: {
           systemInstruction: systemPrompt,
           responseMimeType: "application/json",
@@ -279,7 +279,7 @@ export async function generateChatResponse(message: string, userRegion?: string)
       }`;
 
       const response = await genAI.models.generateContent({
-        model: "gemini-1.5-flash",
+        model: "gemini-2.0-flash",
         config: {
           systemInstruction: systemPrompt,
           responseMimeType: "application/json",
