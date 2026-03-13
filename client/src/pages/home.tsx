@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Sprout, Camera, MessageCircle, Mic, Settings, History, Upload, Images, Calendar, FlaskConical, Droplets, Bug, CalendarIcon, MapPin, CloudRain, TrendingUp, AlertTriangle, ChevronRight } from "lucide-react";
+import { Sprout, Camera, MessageCircle, Mic, Settings, History, Upload, Images, Calendar, FlaskConical, Droplets, Bug, CalendarIcon, MapPin, CloudRain, TrendingUp, AlertTriangle, ChevronRight, Phone, ExternalLink, ShieldCheck } from "lucide-react";
 import type { AnalysisResult } from "@shared/schema";
 import { useUserProfile } from "@/hooks/use-user-profile";
 
@@ -322,6 +322,63 @@ function Home() {
                   Increased fungal activity reported in sugarcane crops. Monitor closely and apply preventive measures.
                 </p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Government Support */}
+        <Card className="mb-8 border-primary/30" data-testid="card-govt-support">
+          <CardContent className="p-6">
+            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <ShieldCheck className="text-primary h-5 w-5" />
+              Government Support
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Kisan Suvidha Portal */}
+              <a
+                href="https://kisansuvidha.gov.in/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block"
+              >
+                <div className="bg-primary/10 border border-primary/20 rounded-md p-4 hover-elevate cursor-pointer h-full">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-primary text-primary-foreground rounded-md p-2 flex-shrink-0">
+                      <ExternalLink className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm">Kisan Suvidha Portal</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Official government portal for weather, market prices, plant protection, agri-inputs and more.
+                      </p>
+                      <p className="text-xs text-primary font-medium mt-2 flex items-center gap-1">
+                        kisansuvidha.gov.in
+                        <ExternalLink className="h-3 w-3" />
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </a>
+
+              {/* Helpline */}
+              <a href="tel:18001801551" className="block">
+                <div className="bg-secondary/10 border border-secondary/20 rounded-md p-4 hover-elevate cursor-pointer h-full">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-secondary text-secondary-foreground rounded-md p-2 flex-shrink-0">
+                      <Phone className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-semibold text-sm">Kisan Helpline</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Free helpline for farmers — crop advice, soil testing, subsidies and government schemes.
+                      </p>
+                      <p className="text-lg font-bold text-secondary mt-2">1800-180-1551</p>
+                      <p className="text-xs text-muted-foreground">Toll-free · 24×7</p>
+                    </div>
+                  </div>
+                </div>
+              </a>
             </div>
           </CardContent>
         </Card>
