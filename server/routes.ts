@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertAnalysisResultSchema, insertChatMessageSchema } from "@shared/schema";
 import { analyzeCropImage, analyzeSoilImage, generateChatResponse } from "./services/openai";
+import { getWeatherForRegion } from "./services/weather";
 import multer from "multer";
 
 // Configure multer for memory storage
@@ -169,6 +170,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching chat history:", error);
       res.status(500).json({ message: "Failed to fetch chat history" });
+    }
+  });
+
+  // Weather endpoint — uses Open-Meteo (free, no key required)
+  app.get("/api/weather", async (req, res) => {
+    try {
+      const region = (req.query.region as string) || "Maharashtra";
+      const weather = await getWeatherForRegion(region);
+      res.json(weather);
+    } catch (error) {
+      console.error("Error fetching weather:", error);
+      res.status(500).json({ message: "Failed to fetch weather data" });
     }
   });
 

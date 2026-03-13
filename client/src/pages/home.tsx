@@ -3,9 +3,48 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Sprout, Camera, MessageCircle, Mic, Settings, History, Upload, Images, Calendar, FlaskConical, Droplets, Bug, CalendarIcon, MapPin, CloudRain, TrendingUp, AlertTriangle, ChevronRight, Phone, ExternalLink, ShieldCheck } from "lucide-react";
+import { Sprout, Camera, MessageCircle, Mic, Settings, History, Upload, Images, Calendar, FlaskConical, Droplets, Bug, CalendarIcon, MapPin, CloudRain, TrendingUp, AlertTriangle, ChevronRight, Phone, ExternalLink, ShieldCheck, Sun, Cloud, CloudSun, CloudDrizzle, CloudSnow, CloudLightning, Wind, Thermometer, Droplets as DropIcon, Eye } from "lucide-react";
 import type { AnalysisResult } from "@shared/schema";
 import { useUserProfile } from "@/hooks/use-user-profile";
+
+interface WeatherData {
+  region: string;
+  current: {
+    temperature: number;
+    feelsLike: number;
+    humidity: number;
+    windSpeed: number;
+    precipitation: number;
+    description: string;
+    icon: string;
+    isRaining: boolean;
+  };
+  forecast: Array<{
+    date: string;
+    day: string;
+    maxTemp: number;
+    minTemp: number;
+    precipitation: number;
+    description: string;
+    icon: string;
+  }>;
+  farmingAlert: string | null;
+}
+
+function WeatherIcon({ icon, className }: { icon: string; className?: string }) {
+  const cls = className || "h-5 w-5";
+  switch (icon) {
+    case "sunny": return <Sun className={cls} />;
+    case "partly_cloudy": return <CloudSun className={cls} />;
+    case "cloudy": return <Cloud className={cls} />;
+    case "foggy": return <Eye className={cls} />;
+    case "drizzle": return <CloudDrizzle className={cls} />;
+    case "rainy": return <CloudRain className={cls} />;
+    case "snowy": return <CloudSnow className={cls} />;
+    case "stormy": return <CloudLightning className={cls} />;
+    default: return <Cloud className={cls} />;
+  }
+}
 
 function Home() {
   const { profile } = useUserProfile();
@@ -13,6 +52,11 @@ function Home() {
   const { data: recentResults, isLoading } = useQuery<AnalysisResult[]>({
     queryKey: ["/api/analysis-results", "user-1"],
     enabled: true,
+  });
+
+  const { data: weather, isLoading: weatherLoading } = useQuery<WeatherData>({
+    queryKey: ["/api/weather", profile?.region],
+    enabled: !!profile?.region,
   });
 
   const greeting = () => {
@@ -274,55 +318,80 @@ function Home() {
           </CardContent>
         </Card>
 
-        {/* Regional Recommendations */}
-        <Card className="mb-8" data-testid="card-regional-recommendations">
+        {/* Live Weather */}
+        <Card className="mb-8" data-testid="card-weather">
           <CardContent className="p-6">
-            <h3 className="text-xl font-semibold mb-6 flex items-center">
-              <MapPin className="text-accent mr-3" />
-              {profile?.region || "Regional"} Tips
+            <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <CloudRain className="text-accent h-5 w-5" />
+              Live Weather — {profile?.region || "Your Region"}
             </h3>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-accent/10 rounded-lg p-4 border border-accent/20" data-testid="alert-weather">
-                <div className="flex items-center mb-3">
-                  <CloudRain className="text-accent mr-2" />
-                  <h4 className="font-semibold text-accent">Weather Alert</h4>
-                </div>
-                <p className="text-sm text-foreground">
-                  Heavy rainfall expected this week. Ensure proper drainage for your crops and delay pesticide application.
-                </p>
-              </div>
+            {weatherLoading ? (
+              <div className="text-center text-muted-foreground py-8">Fetching live weather...</div>
+            ) : !weather ? (
+              <div className="text-center text-muted-foreground py-6">Weather data unavailable. Check your connection.</div>
+            ) : (
+              <div className="space-y-4">
+                {/* Farming alert banner */}
+                {weather.farmingAlert && (
+                  <div className="flex items-start gap-3 bg-accent/10 border border-accent/25 rounded-md p-3">
+                    <AlertTriangle className="h-4 w-4 text-accent flex-shrink-0 mt-0.5" />
+                    <p className="text-sm text-foreground">{weather.farmingAlert}</p>
+                  </div>
+                )}
 
-              <div className="bg-secondary/10 rounded-lg p-4 border border-secondary/20" data-testid="advice-seasonal">
-                <div className="flex items-center mb-3">
-                  <Calendar className="text-secondary mr-2" />
-                  <h4 className="font-semibold text-secondary">Seasonal Advice</h4>
+                {/* Current conditions */}
+                <div className="bg-primary/10 border border-primary/20 rounded-md p-4">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-primary text-primary-foreground rounded-md p-3">
+                        <WeatherIcon icon={weather.current.icon} className="h-7 w-7" />
+                      </div>
+                      <div>
+                        <p className="text-3xl font-bold">{weather.current.temperature}°C</p>
+                        <p className="text-sm text-muted-foreground">{weather.current.description}</p>
+                        <p className="text-xs text-muted-foreground">{weather.region}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Thermometer className="h-3.5 w-3.5" />
+                        <span>Feels {weather.current.feelsLike}°C</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <DropIcon className="h-3.5 w-3.5" />
+                        <span>Humidity {weather.current.humidity}%</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Wind className="h-3.5 w-3.5" />
+                        <span>Wind {weather.current.windSpeed} km/h</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <CloudRain className="h-3.5 w-3.5" />
+                        <span>Rain {weather.current.precipitation} mm</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-sm text-foreground">
-                  Perfect time for cotton sowing. Prepare fields with appropriate spacing and ensure good seed quality.
-                </p>
-              </div>
 
-              <div className="bg-primary/10 rounded-lg p-4 border border-primary/20" data-testid="info-market">
-                <div className="flex items-center mb-3">
-                  <TrendingUp className="text-primary mr-2" />
-                  <h4 className="font-semibold text-primary">Market Trends</h4>
+                {/* 5-day forecast */}
+                <div className="grid grid-cols-5 gap-2">
+                  {weather.forecast.map((day) => (
+                    <div key={day.date} className="flex flex-col items-center bg-muted rounded-md p-2 text-center">
+                      <p className="text-xs font-medium text-muted-foreground">{day.day}</p>
+                      <WeatherIcon icon={day.icon} className="h-4 w-4 my-1 text-primary" />
+                      <p className="text-xs font-semibold">{day.maxTemp}°</p>
+                      <p className="text-xs text-muted-foreground">{day.minTemp}°</p>
+                      {day.precipitation > 0 && (
+                        <p className="text-xs text-blue-500 mt-0.5">{day.precipitation}mm</p>
+                      )}
+                    </div>
+                  ))}
                 </div>
-                <p className="text-sm text-foreground">
-                  Onion prices are rising. Consider increasing onion cultivation area for next season.
-                </p>
-              </div>
 
-              <div className="bg-destructive/10 rounded-lg p-4 border border-destructive/20" data-testid="alert-disease">
-                <div className="flex items-center mb-3">
-                  <AlertTriangle className="text-destructive mr-2" />
-                  <h4 className="font-semibold text-destructive">Disease Alert</h4>
-                </div>
-                <p className="text-sm text-foreground">
-                  Increased fungal activity reported in sugarcane crops. Monitor closely and apply preventive measures.
-                </p>
+                <p className="text-xs text-muted-foreground text-right">Source: Open-Meteo · Updated live</p>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
