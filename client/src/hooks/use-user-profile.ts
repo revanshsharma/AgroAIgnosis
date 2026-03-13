@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext, createContext } from "react";
 
 export interface UserProfile {
   name: string;
@@ -11,16 +11,26 @@ export interface UserProfile {
 
 const STORAGE_KEY = "krishimitra_user_profile";
 
-const defaultProfile: UserProfile = {
-  name: "",
-  region: "",
-  farmSize: "",
-  primaryCrop: "",
-  phone: "",
-  joinedDate: new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
-};
+export interface UserProfileContextValue {
+  profile: UserProfile | null;
+  isLoading: boolean;
+  hasProfile: boolean;
+  saveProfile: (data: UserProfile) => void;
+  updateProfile: (data: Partial<UserProfile>) => void;
+  clearProfile: () => void;
+}
 
-export function useUserProfile() {
+export const UserProfileContext = createContext<UserProfileContextValue | null>(null);
+
+export function useUserProfile(): UserProfileContextValue {
+  const ctx = useContext(UserProfileContext);
+  if (!ctx) {
+    throw new Error("useUserProfile must be used within UserProfileProvider");
+  }
+  return ctx;
+}
+
+export function useUserProfileState(): UserProfileContextValue {
   const [profile, setProfileState] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -44,8 +54,15 @@ export function useUserProfile() {
   };
 
   const updateProfile = (data: Partial<UserProfile>) => {
-    const updated = { ...(profile || defaultProfile), ...data };
-    saveProfile(updated);
+    const updated = {
+      ...(profile || {
+        name: "",
+        region: "",
+        joinedDate: new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
+      }),
+      ...data,
+    };
+    saveProfile(updated as UserProfile);
   };
 
   const clearProfile = () => {

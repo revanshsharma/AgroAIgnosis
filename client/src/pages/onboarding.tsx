@@ -6,7 +6,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Sprout, MapPin, User, ChevronRight } from "lucide-react";
 import { useUserProfile, INDIAN_REGIONS, PRIMARY_CROPS } from "@/hooks/use-user-profile";
-import { useLocation } from "wouter";
 
 function Onboarding() {
   const [step, setStep] = useState(1);
@@ -16,7 +15,6 @@ function Onboarding() {
   const [primaryCrop, setPrimaryCrop] = useState("");
   const [phone, setPhone] = useState("");
   const { saveProfile } = useUserProfile();
-  const [, setLocation] = useLocation();
 
   const handleFinish = () => {
     saveProfile({
@@ -27,7 +25,7 @@ function Onboarding() {
       phone: phone.trim(),
       joinedDate: new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
     });
-    setLocation("/");
+    // No navigation needed — AppShell switches automatically when hasProfile becomes true
   };
 
   return (
