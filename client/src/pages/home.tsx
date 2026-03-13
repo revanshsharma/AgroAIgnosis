@@ -54,9 +54,10 @@ function Home() {
     enabled: true,
   });
 
+  const weatherRegion = profile?.region || "";
   const { data: weather, isLoading: weatherLoading } = useQuery<WeatherData>({
-    queryKey: ["/api/weather", profile?.region],
-    enabled: !!profile?.region,
+    queryKey: [`/api/weather?region=${encodeURIComponent(weatherRegion)}`],
+    enabled: !!weatherRegion,
   });
 
   const greeting = () => {
