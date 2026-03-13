@@ -10,13 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import VoiceRecorder from "@/components/voice-recorder";
 import type { ChatMessage } from "@shared/schema";
-
-// Mock user data
-const mockUser = {
-  id: "user-1",
-  username: "Rajesh",
-  region: "Maharashtra"
-};
+import { useUserProfile } from "@/hooks/use-user-profile";
 
 interface ChatResponse extends ChatMessage {
   relatedTopics?: string[];
@@ -30,6 +24,9 @@ function Chat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { profile } = useUserProfile();
+
+  const userId = "user-1";
 
   // Check if voice mode is enabled from URL
   useEffect(() => {
@@ -39,23 +36,25 @@ function Chat() {
     }
   }, [location]);
 
-  const { data: chatHistory, isLoading } = useQuery({
-    queryKey: ["/api/chat-history", mockUser.id],
-    enabled: !!mockUser.id,
+  const { data: chatHistory, isLoading } = useQuery<ChatMessage[]>({
+    queryKey: ["/api/chat-history", userId],
+    enabled: true,
   });
 
   const sendMessageMutation = useMutation({
     mutationFn: async (data: { message: string; isVoice?: boolean }) => {
       const response = await apiRequest("POST", "/api/chat", {
         message: data.message,
-        userId: mockUser.id,
+        userId,
         isVoice: data.isVoice || false,
-        userRegion: mockUser.region
+        userRegion: profile?.region || "India",
+        userName: profile?.name,
+        primaryCrop: profile?.primaryCrop,
       });
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/chat-history", mockUser.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/chat-history", userId] });
       setMessage("");
     },
     onError: (error) => {

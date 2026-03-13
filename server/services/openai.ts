@@ -263,13 +263,19 @@ export async function analyzeSoilImage(base64Image: string, mimeType: string = '
   return analyzeSoilVisually();
 }
 
-export async function generateChatResponse(message: string, userRegion?: string): Promise<ChatResponse> {
+export async function generateChatResponse(message: string, userRegion?: string, userName?: string, primaryCrop?: string): Promise<ChatResponse> {
   // Try Gemini first if available
   if (genAI) {
     try {
       console.log("Starting chat response generation with Gemini AI...");
       
-      const systemPrompt = `You are KrishiMitra, an AI agricultural assistant specialized in helping Indian farmers. You provide practical, actionable advice about farming, crop diseases, soil management, irrigation, fertilization, and pest control specific to Indian agricultural practices and climate conditions. ${userRegion ? `The user is from ${userRegion} region.` : ''} 
+      const userContext = [
+        userName ? `The farmer's name is ${userName}.` : '',
+        userRegion ? `They farm in ${userRegion}, India.` : 'They farm in India.',
+        primaryCrop ? `Their primary crop is ${primaryCrop}.` : '',
+      ].filter(Boolean).join(' ');
+
+      const systemPrompt = `You are KrishiMitra, an AI agricultural assistant specialized in helping Indian farmers. You provide practical, actionable advice about farming, crop diseases, soil management, irrigation, fertilization, and pest control specific to Indian agricultural practices and climate conditions. ${userContext}
       
       Respond with JSON containing:
       {

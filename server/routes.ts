@@ -121,14 +121,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Chat endpoint
   app.post("/api/chat", async (req, res) => {
     try {
-      const { message, userId, isVoice, userRegion } = req.body;
+      const { message, userId, isVoice, userRegion, userName, primaryCrop } = req.body;
       
       if (!message || !userId) {
         return res.status(400).json({ message: "Missing required fields: message, userId" });
       }
 
       // Generate AI response
-      const chatResponse = await generateChatResponse(message, userRegion);
+      const chatResponse = await generateChatResponse(message, userRegion, userName, primaryCrop);
       
       // Store chat message and response
       const chatData = {

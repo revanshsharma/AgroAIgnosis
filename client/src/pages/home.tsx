@@ -3,26 +3,23 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Sprout, Camera, MessageCircle, Mic, User, Settings, History, Upload, Images, Calendar, FlaskConical, Droplets, Bug, CalendarIcon, MapPin, CloudRain, TrendingUp, AlertTriangle, ChevronRight } from "lucide-react";
+import { Sprout, Camera, MessageCircle, Mic, Settings, History, Upload, Images, Calendar, FlaskConical, Droplets, Bug, CalendarIcon, MapPin, CloudRain, TrendingUp, AlertTriangle, ChevronRight } from "lucide-react";
 import type { AnalysisResult } from "@shared/schema";
-
-// Mock user data - in real app this would come from authentication
-const mockUser = {
-  id: "user-1",
-  username: "Rajesh",
-  region: "Maharashtra"
-};
+import { useUserProfile } from "@/hooks/use-user-profile";
 
 function Home() {
-  const { data: recentResults, isLoading } = useQuery({
-    queryKey: ["/api/analysis-results", mockUser.id],
-    enabled: !!mockUser.id,
+  const { profile } = useUserProfile();
+
+  const { data: recentResults, isLoading } = useQuery<AnalysisResult[]>({
+    queryKey: ["/api/analysis-results", "user-1"],
+    enabled: true,
   });
 
-  const mockStats = {
-    scannedToday: 3,
-    issuesFound: 1,
-    healthyCrops: 12
+  const greeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Good Morning";
+    if (hour < 17) return "Good Afternoon";
+    return "Good Evening";
   };
 
   const getStatusColor = (status: string) => {
@@ -87,38 +84,44 @@ function Home() {
         {/* Welcome Section */}
         <Card className="mb-6" data-testid="card-welcome">
           <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
               <div>
                 <h2 className="text-2xl font-bold mb-1" data-testid="text-greeting">
-                  Good Morning, {mockUser.username}!
+                  {greeting()}, {profile?.name?.split(" ")[0] || "Farmer"}!
                 </h2>
                 <p className="text-muted-foreground" data-testid="text-welcome-message">
                   Ready to care for your crops today?
                 </p>
               </div>
-              <div className="text-right">
-                <p className="text-sm text-muted-foreground">Your Region</p>
-                <p className="font-semibold text-primary" data-testid="text-user-region">
-                  {mockUser.region}
-                </p>
-              </div>
+              <Link href="/profile">
+                <div className="text-right cursor-pointer">
+                  <p className="text-xs text-primary-foreground/70">Your Region</p>
+                  <p className="font-semibold flex items-center gap-1" data-testid="text-user-region">
+                    <MapPin className="h-3.5 w-3.5" />
+                    {profile?.region || "Set region"}
+                  </p>
+                  {profile?.primaryCrop && (
+                    <p className="text-xs text-primary-foreground/70 mt-0.5">{profile.primaryCrop}</p>
+                  )}
+                </div>
+              </Link>
             </div>
 
             {/* Quick Stats */}
             <div className="grid grid-cols-3 gap-4">
               <div className="text-center bg-muted rounded-lg p-3" data-testid="stat-scanned-today">
                 <Sprout className="text-2xl text-secondary mb-1 mx-auto" />
-                <p className="text-sm font-medium">{mockStats.scannedToday}</p>
-                <p className="text-xs text-muted-foreground">Scanned Today</p>
+                <p className="text-sm font-medium">{Array.isArray(recentResults) ? recentResults.length : 0}</p>
+                <p className="text-xs text-muted-foreground">Total Scans</p>
               </div>
               <div className="text-center bg-muted rounded-lg p-3" data-testid="stat-issues-found">
                 <AlertTriangle className="text-2xl text-accent mb-1 mx-auto" />
-                <p className="text-sm font-medium">{mockStats.issuesFound}</p>
+                <p className="text-sm font-medium">{Array.isArray(recentResults) ? recentResults.filter((r: AnalysisResult) => r.status === "disease_detected").length : 0}</p>
                 <p className="text-xs text-muted-foreground">Issues Found</p>
               </div>
               <div className="text-center bg-muted rounded-lg p-3" data-testid="stat-healthy-crops">
                 <Sprout className="text-2xl text-secondary mb-1 mx-auto" />
-                <p className="text-sm font-medium">{mockStats.healthyCrops}</p>
+                <p className="text-sm font-medium">{Array.isArray(recentResults) ? recentResults.filter((r: AnalysisResult) => r.status === "healthy").length : 0}</p>
                 <p className="text-xs text-muted-foreground">Healthy Crops</p>
               </div>
             </div>
@@ -276,7 +279,7 @@ function Home() {
           <CardContent className="p-6">
             <h3 className="text-xl font-semibold mb-6 flex items-center">
               <MapPin className="text-accent mr-3" />
-              {mockUser.region} Region Tips
+              {profile?.region || "Regional"} Tips
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

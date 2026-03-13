@@ -6,17 +6,10 @@ import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import type { AnalysisResult } from "@shared/schema";
 
-// Mock user data
-const mockUser = {
-  id: "user-1",
-  username: "Rajesh",
-  region: "Maharashtra"
-};
-
 function History() {
-  const { data: analysisHistory, isLoading } = useQuery({
-    queryKey: ["/api/analysis-results", mockUser.id],
-    enabled: !!mockUser.id,
+  const { data: analysisHistory, isLoading } = useQuery<AnalysisResult[]>({
+    queryKey: ["/api/analysis-results", "user-1"],
+    enabled: true,
   });
 
   const getStatusColor = (status: string) => {
