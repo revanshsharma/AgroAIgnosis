@@ -51,7 +51,27 @@ export interface ChatResponse {
   actionable?: boolean;
 }
 
-export async function analyzeCropImage(base64Image: string, mimeType: string = 'image/jpeg'): Promise<CropAnalysisResult> {
+const ANALYSIS_LANGUAGE_MAP: Record<string, string> = {
+  en: "English",
+  hi: "Hindi",
+  mr: "Marathi",
+  ta: "Tamil",
+  te: "Telugu",
+  kn: "Kannada",
+  bn: "Bengali",
+  gu: "Gujarati",
+  pa: "Punjabi",
+};
+
+function resolveAnalysisLanguage(languageCode?: string): string {
+  if (!languageCode) {
+    return "English";
+  }
+  return ANALYSIS_LANGUAGE_MAP[languageCode.toLowerCase()] || "English";
+}
+
+export async function analyzeCropImage(base64Image: string, mimeType: string = 'image/jpeg', languageCode: string = 'en'): Promise<CropAnalysisResult> {
+  const responseLanguage = resolveAnalysisLanguage(languageCode);
   // Try Gemini first if available
   if (genAI) {
     try {
@@ -66,9 +86,11 @@ export async function analyzeCropImage(base64Image: string, mimeType: string = '
         "confidence": "high|medium|low based on image clarity and analysis certainty",
         "treatmentSteps": ["step1", "step2", "step3"],
         "preventiveMeasures": ["measure1", "measure2"]
-      }`;
+      }
 
-      const userPrompt = "Analyze this crop image for diseases, pests, nutritional deficiencies, or other health issues. Provide specific recommendations suitable for Indian agricultural practices and climate conditions.";
+      Important: Write all user-facing values in ${responseLanguage}. Keep status exactly as healthy|disease_detected|needs_attention and confidence as high|medium|low in English.`;
+
+      const userPrompt = `Analyze this crop image for diseases, pests, nutritional deficiencies, or other health issues. Provide specific recommendations suitable for Indian agricultural practices and climate conditions. Respond in ${responseLanguage}.`;
 
       const contents = [
         {
@@ -185,7 +207,8 @@ export async function analyzeCropImage(base64Image: string, mimeType: string = '
   };
 }
 
-export async function analyzeSoilImage(base64Image: string, mimeType: string = 'image/jpeg'): Promise<SoilAnalysisResult> {
+export async function analyzeSoilImage(base64Image: string, mimeType: string = 'image/jpeg', languageCode: string = 'en'): Promise<SoilAnalysisResult> {
+  const responseLanguage = resolveAnalysisLanguage(languageCode);
   // Try Gemini first if available
   if (genAI) {
     try {
@@ -201,9 +224,11 @@ export async function analyzeSoilImage(base64Image: string, mimeType: string = '
         "phLevel": "estimated pH level description",
         "fertility": "fertility assessment",
         "improvements": ["improvement1", "improvement2"]
-      }`;
+      }
 
-      const userPrompt = "Analyze this soil image for quality, composition, moisture content, organic matter, and overall health. Provide specific recommendations for soil improvement suitable for Indian agricultural practices.";
+      Important: Write all user-facing values in ${responseLanguage}. Keep status exactly as healthy|needs_attention|poor and confidence as high|medium|low in English.`;
+
+      const userPrompt = `Analyze this soil image for quality, composition, moisture content, organic matter, and overall health. Provide specific recommendations for soil improvement suitable for Indian agricultural practices. Respond in ${responseLanguage}.`;
 
       const contents = [
         {

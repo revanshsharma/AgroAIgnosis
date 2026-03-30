@@ -41,7 +41,9 @@ export class MemStorage implements IStorage {
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = randomUUID();
     const user: User = { 
-      ...insertUser, 
+      username: insertUser.username,
+      password: insertUser.password,
+      region: insertUser.region ?? null,
       id, 
       createdAt: new Date()
     };
@@ -52,7 +54,15 @@ export class MemStorage implements IStorage {
   async createAnalysisResult(insertResult: InsertAnalysisResult): Promise<AnalysisResult> {
     const id = randomUUID();
     const result: AnalysisResult = {
-      ...insertResult,
+      userId: insertResult.userId ?? null,
+      imageUrl: insertResult.imageUrl,
+      analysisType: insertResult.analysisType,
+      cropType: insertResult.cropType ?? null,
+      diagnosis: insertResult.diagnosis,
+      recommendations: insertResult.recommendations,
+      status: insertResult.status,
+      confidence: insertResult.confidence ?? null,
+      metadata: insertResult.metadata ?? null,
       id,
       createdAt: new Date()
     };
@@ -75,7 +85,10 @@ export class MemStorage implements IStorage {
   async createChatMessage(insertMessage: InsertChatMessage): Promise<ChatMessage> {
     const id = randomUUID();
     const message: ChatMessage = {
-      ...insertMessage,
+      userId: insertMessage.userId ?? null,
+      message: insertMessage.message,
+      response: insertMessage.response,
+      isVoice: insertMessage.isVoice ?? null,
       id,
       createdAt: new Date()
     };

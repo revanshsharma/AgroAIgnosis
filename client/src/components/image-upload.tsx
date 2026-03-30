@@ -23,20 +23,34 @@ interface AnalysisResponse {
   metadata?: any;
 }
 
+const ANALYSIS_LANGUAGES = [
+  { value: "en", label: "English" },
+  { value: "hi", label: "Hindi" },
+  { value: "mr", label: "Marathi" },
+  { value: "ta", label: "Tamil" },
+  { value: "te", label: "Telugu" },
+  { value: "kn", label: "Kannada" },
+  { value: "bn", label: "Bengali" },
+  { value: "gu", label: "Gujarati" },
+  { value: "pa", label: "Punjabi" },
+] as const;
+
 function ImageUpload() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [analysisType, setAnalysisType] = useState<'crop' | 'soil'>('crop');
+  const [analysisLanguage, setAnalysisLanguage] = useState<string>('en');
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   const analyzeImageMutation = useMutation({
-    mutationFn: async (data: { file: File; analysisType: string }) => {
+    mutationFn: async (data: { file: File; analysisType: string; language: string }) => {
       const formData = new FormData();
       formData.append('image', data.file);
       formData.append('analysisType', data.analysisType);
+      formData.append('language', data.language);
       formData.append('userId', mockUser.id);
 
       const response = await fetch('/api/analyze-image', {
@@ -102,7 +116,7 @@ function ImageUpload() {
 
   const startAnalysis = () => {
     if (selectedFile) {
-      analyzeImageMutation.mutate({ file: selectedFile, analysisType });
+      analyzeImageMutation.mutate({ file: selectedFile, analysisType, language: analysisLanguage });
     }
   };
 
@@ -136,6 +150,21 @@ function ImageUpload() {
         >
           Soil Analysis
         </Button>
+      </div>
+
+      <div className="space-y-2 max-w-xs mx-auto" data-testid="analysis-language-selection">
+        <label className="text-sm font-medium" htmlFor="analysis-language">Report Language</label>
+        <select
+          id="analysis-language"
+          value={analysisLanguage}
+          onChange={(event) => setAnalysisLanguage(event.target.value)}
+          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+          data-testid="select-analysis-language"
+        >
+          {ANALYSIS_LANGUAGES.map((language) => (
+            <option key={language.value} value={language.value}>{language.label}</option>
+          ))}
+        </select>
       </div>
 
       {/* Upload Area */}

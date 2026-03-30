@@ -21,6 +21,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { analysisType, userId } = req.body;
+      const requestedLanguage = typeof req.body.language === "string" ? req.body.language : "en";
       
       if (!analysisType || !userId) {
         return res.status(400).json({ message: "Missing required fields: analysisType, userId" });
@@ -34,7 +35,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let resultData;
 
       if (analysisType === 'crop') {
-        analysisResult = await analyzeCropImage(base64Image, mimeType);
+        analysisResult = await analyzeCropImage(base64Image, mimeType, requestedLanguage);
         resultData = {
           userId,
           imageUrl: `data:${req.file.mimetype};base64,${base64Image}`,
@@ -45,12 +46,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: analysisResult.status,
           confidence: analysisResult.confidence,
           metadata: {
+            language: requestedLanguage,
             treatmentSteps: analysisResult.treatmentSteps,
             preventiveMeasures: analysisResult.preventiveMeasures
           }
         };
       } else if (analysisType === 'soil') {
-        analysisResult = await analyzeSoilImage(base64Image, mimeType);
+        analysisResult = await analyzeSoilImage(base64Image, mimeType, requestedLanguage);
         resultData = {
           userId,
           imageUrl: `data:${req.file.mimetype};base64,${base64Image}`,
@@ -61,6 +63,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: analysisResult.status,
           confidence: analysisResult.confidence,
           metadata: {
+            language: requestedLanguage,
             soilType: analysisResult.soilType,
             phLevel: analysisResult.phLevel,
             fertility: analysisResult.fertility,
