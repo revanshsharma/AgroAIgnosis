@@ -1,11 +1,26 @@
 import { type User, type InsertUser, type AnalysisResult, type InsertAnalysisResult, type ChatMessage, type InsertChatMessage } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { randomUUID, scryptSync, randomBytes, timingSafeEqual } from "crypto";
+
+export interface AuthUser {
+  id: string;
+  phone: string;
+  pinHash: string;
+  name: string;
+  region: string;
+  createdAt: Date;
+}
 
 export interface IStorage {
   // User operations
   getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
+
+  // Phone auth operations
+  getAuthUserByPhone(phone: string): Promise<AuthUser | undefined>;
+  createAuthUser(phone: string, pin: string, name: string, region: string): Promise<AuthUser>;
+  verifyAuthUser(phone: string, pin: string): Promise<AuthUser | null>;
+  getAuthUser(id: string): Promise<AuthUser | undefined>;
 
   // Analysis operations
   createAnalysisResult(result: InsertAnalysisResult): Promise<AnalysisResult>;
@@ -17,13 +32,34 @@ export interface IStorage {
   getUserChatMessages(userId: string, limit?: number): Promise<ChatMessage[]>;
 }
 
+function hashPin(pin: string, salt?: string): { hash: string; salt: string } {
+  const s = salt || randomBytes(16).toString('hex');
+  const hash = scryptSync(pin, s, 64).toString('hex');
+  return { hash: `${s}:${hash}`, salt: s };
+}
+
+function verifyPin(pin: string, stored: string): boolean {
+  try {
+    const [salt, hash] = stored.split(':');
+    const { hash: newHash } = hashPin(pin, salt);
+    const [, newHashOnly] = newHash.split(':');
+    return timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(newHashOnly, 'hex'));
+  } catch {
+    return false;
+  }
+}
+
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
+  private authUsers: Map<string, AuthUser>;
+  private authUsersByPhone: Map<string, string>;
   private analysisResults: Map<string, AnalysisResult>;
   private chatMessages: Map<string, ChatMessage>;
 
   constructor() {
     this.users = new Map();
+    this.authUsers = new Map();
+    this.authUsersByPhone = new Map();
     this.analysisResults = new Map();
     this.chatMessages = new Map();
   }
@@ -49,6 +85,35 @@ export class MemStorage implements IStorage {
     };
     this.users.set(id, user);
     return user;
+  }
+
+  async getAuthUserByPhone(phone: string): Promise<AuthUser | undefined> {
+    const id = this.authUsersByPhone.get(phone);
+    if (!id) return undefined;
+    return this.authUsers.get(id);
+  }
+
+  async createAuthUser(phone: string, pin: string, name: string, region: string): Promise<AuthUser> {
+    if (this.authUsersByPhone.has(phone)) {
+      throw new Error("Phone number already registered");
+    }
+    const id = randomUUID();
+    const { hash: pinHash } = hashPin(pin);
+    const user: AuthUser = { id, phone, pinHash, name, region, createdAt: new Date() };
+    this.authUsers.set(id, user);
+    this.authUsersByPhone.set(phone, id);
+    return user;
+  }
+
+  async verifyAuthUser(phone: string, pin: string): Promise<AuthUser | null> {
+    const user = await this.getAuthUserByPhone(phone);
+    if (!user) return null;
+    if (!verifyPin(pin, user.pinHash)) return null;
+    return user;
+  }
+
+  async getAuthUser(id: string): Promise<AuthUser | undefined> {
+    return this.authUsers.get(id);
   }
 
   async createAnalysisResult(insertResult: InsertAnalysisResult): Promise<AnalysisResult> {

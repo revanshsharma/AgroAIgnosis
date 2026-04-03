@@ -10,43 +10,108 @@ import Chat from "@/pages/chat";
 import History from "@/pages/history";
 import Profile from "@/pages/profile";
 import Onboarding from "@/pages/onboarding";
+import SchemesPage from "@/pages/schemes";
+import SupportPage from "@/pages/support";
+import AuthPage from "@/pages/auth";
 import BottomNavigation from "@/components/bottom-navigation";
 import { UserProfileContext, useUserProfileState } from "@/hooks/use-user-profile";
+import { LanguageContext, useLanguageState } from "@/hooks/use-language";
+import { useEffect, useState } from "react";
+import { Wifi } from "lucide-react";
+
+// Register service worker for offline support
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+
+function OfflineBanner({ t }: { t: any }) {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, []);
+
+  if (isOnline) return null;
+
+  return (
+    <div className="fixed top-0 left-0 right-0 z-50 bg-destructive text-destructive-foreground flex items-center justify-center gap-2 py-2 text-sm font-medium">
+      <Wifi className="h-4 w-4" />
+      {t.common.offline_title} — {t.common.offline_message}
+    </div>
+  );
+}
 
 function AppShell() {
   const profileState = useUserProfileState();
-  const { hasProfile, isLoading } = profileState;
+  const { hasProfile, isLoading, profile } = profileState;
+  const langState = useLanguageState(profile?.region);
+  const { t } = langState;
+
+  const AUTH_DECIDED_KEY = "krishimitra_auth_decided";
+  const [authDecided, setAuthDecided] = useState(() => {
+    return localStorage.getItem(AUTH_DECIDED_KEY) === "1";
+  });
+
+  const handleAuthDecision = () => {
+    localStorage.setItem(AUTH_DECIDED_KEY, "1");
+    setAuthDecided(true);
+  };
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-primary text-lg font-medium">Loading...</div>
+        <div className="text-primary text-lg font-medium">{t.common.loading}</div>
       </div>
     );
   }
 
   if (!hasProfile) {
     return (
-      <UserProfileContext.Provider value={profileState}>
-        <Onboarding />
-      </UserProfileContext.Provider>
+      <LanguageContext.Provider value={langState}>
+        <UserProfileContext.Provider value={profileState}>
+          <Onboarding />
+        </UserProfileContext.Provider>
+      </LanguageContext.Provider>
+    );
+  }
+
+  // Show auth page once after onboarding (first time user has a profile)
+  if (!authDecided) {
+    return (
+      <LanguageContext.Provider value={langState}>
+        <AuthPage
+          onSuccess={handleAuthDecision}
+          onGuest={handleAuthDecision}
+        />
+      </LanguageContext.Provider>
     );
   }
 
   return (
-    <UserProfileContext.Provider value={profileState}>
-      <div className="min-h-screen bg-background text-foreground pb-16">
-        <Switch>
-          <Route path="/" component={Home} />
-          <Route path="/analysis" component={Analysis} />
-          <Route path="/chat" component={Chat} />
-          <Route path="/history" component={History} />
-          <Route path="/profile" component={Profile} />
-          <Route component={NotFound} />
-        </Switch>
-        <BottomNavigation />
-      </div>
-    </UserProfileContext.Provider>
+    <LanguageContext.Provider value={langState}>
+      <UserProfileContext.Provider value={profileState}>
+        <OfflineBanner t={t} />
+        <div className="min-h-screen bg-background text-foreground pb-16">
+          <Switch>
+            <Route path="/" component={Home} />
+            <Route path="/analysis" component={Analysis} />
+            <Route path="/chat" component={Chat} />
+            <Route path="/history" component={History} />
+            <Route path="/schemes" component={SchemesPage} />
+            <Route path="/support" component={SupportPage} />
+            <Route path="/profile" component={Profile} />
+            <Route component={NotFound} />
+          </Switch>
+          <BottomNavigation />
+        </div>
+      </UserProfileContext.Provider>
+    </LanguageContext.Provider>
   );
 }
 

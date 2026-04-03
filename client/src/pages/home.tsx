@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Sprout, Camera, MessageCircle, Mic, Settings, History, Upload, Images, Calendar, FlaskConical, Droplets, Bug, CalendarIcon, MapPin, CloudRain, TrendingUp, AlertTriangle, ChevronRight, Phone, ExternalLink, ShieldCheck, Sun, Cloud, CloudSun, CloudDrizzle, CloudSnow, CloudLightning, Wind, Thermometer, Droplets as DropIcon, Eye } from "lucide-react";
+import { Sprout, Camera, MessageCircle, Mic, Settings, History, Upload, Images, Calendar, FlaskConical, Droplets, Bug, CalendarIcon, MapPin, CloudRain, TrendingUp, AlertTriangle, ChevronRight, Phone, ExternalLink, ShieldCheck, Sun, Cloud, CloudSun, CloudDrizzle, CloudSnow, CloudLightning, Wind, Thermometer, Droplets as DropIcon, Eye, IndianRupee, HandHeart } from "lucide-react";
 import type { AnalysisResult } from "@shared/schema";
 import { useUserProfile } from "@/hooks/use-user-profile";
+import { useLanguage } from "@/hooks/use-language";
 
 interface WeatherData {
   region: string;
@@ -48,6 +49,7 @@ function WeatherIcon({ icon, className }: { icon: string; className?: string }) 
 
 function Home() {
   const { profile } = useUserProfile();
+  const { t } = useLanguage();
 
   const { data: recentResults, isLoading } = useQuery<AnalysisResult[]>({
     queryKey: ["/api/analysis-results", "user-1"],
@@ -62,9 +64,9 @@ function Home() {
 
   const greeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Good Morning";
-    if (hour < 17) return "Good Afternoon";
-    return "Good Evening";
+    if (hour < 12) return t.home.greeting_morning;
+    if (hour < 17) return t.home.greeting_afternoon;
+    return t.home.greeting_evening;
   };
 
   const getStatusColor = (status: string) => {
@@ -83,11 +85,11 @@ function Home() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'healthy':
-        return 'Healthy';
+        return t.home.healthy_crops;
       case 'disease_detected':
-        return 'Disease Detected';
+        return t.analysis.status_disease;
       case 'needs_attention':
-        return 'Needs Attention';
+        return t.analysis.status_attention;
       default:
         return status;
     }
@@ -135,12 +137,12 @@ function Home() {
                   {greeting()}, {profile?.name?.split(" ")[0] || "Farmer"}!
                 </h2>
                 <p className="text-muted-foreground" data-testid="text-welcome-message">
-                  Ready to care for your crops today?
+                  {t.home.subtitle}
                 </p>
               </div>
               <Link href="/profile">
                 <div className="text-right cursor-pointer">
-                  <p className="text-xs text-primary-foreground/70">Your Region</p>
+                  <p className="text-xs text-primary-foreground/70">{t.profile.region}</p>
                   <p className="font-semibold flex items-center gap-1" data-testid="text-user-region">
                     <MapPin className="h-3.5 w-3.5" />
                     {profile?.region || "Set region"}
@@ -157,17 +159,17 @@ function Home() {
               <div className="text-center bg-muted rounded-lg p-3" data-testid="stat-scanned-today">
                 <Sprout className="text-2xl text-secondary mb-1 mx-auto" />
                 <p className="text-sm font-medium">{Array.isArray(recentResults) ? recentResults.length : 0}</p>
-                <p className="text-xs text-muted-foreground">Total Scans</p>
+                <p className="text-xs text-muted-foreground">{t.home.total_scans}</p>
               </div>
               <div className="text-center bg-muted rounded-lg p-3" data-testid="stat-issues-found">
                 <AlertTriangle className="text-2xl text-accent mb-1 mx-auto" />
                 <p className="text-sm font-medium">{Array.isArray(recentResults) ? recentResults.filter((r: AnalysisResult) => r.status === "disease_detected").length : 0}</p>
-                <p className="text-xs text-muted-foreground">Issues Found</p>
+                <p className="text-xs text-muted-foreground">{t.home.issues_found}</p>
               </div>
               <div className="text-center bg-muted rounded-lg p-3" data-testid="stat-healthy-crops">
                 <Sprout className="text-2xl text-secondary mb-1 mx-auto" />
                 <p className="text-sm font-medium">{Array.isArray(recentResults) ? recentResults.filter((r: AnalysisResult) => r.status === "healthy").length : 0}</p>
-                <p className="text-xs text-muted-foreground">Healthy Crops</p>
+                <p className="text-xs text-muted-foreground">{t.home.healthy_crops}</p>
               </div>
             </div>
           </CardContent>
@@ -180,21 +182,21 @@ function Home() {
             <CardContent className="p-6">
               <div className="flex items-center mb-4">
                 <Camera className="text-2xl text-primary mr-3" />
-                <h3 className="text-xl font-semibold">Crop Analysis</h3>
+                <h3 className="text-xl font-semibold">{t.home.crop_analysis}</h3>
               </div>
               <p className="text-muted-foreground mb-6">
-                Take a photo of your crops or soil for instant AI-powered analysis and recommendations.
+                {t.analysis.upload_hint}
               </p>
 
               {/* Image Upload Area */}
               <div className="border-2 border-dashed border-border rounded-lg p-8 text-center mb-4 bg-muted/30 hover:bg-muted/50 transition-colors cursor-pointer">
                 <Upload className="text-4xl text-muted-foreground mb-3 mx-auto" />
-                <p className="font-medium mb-1">Upload Crop Image</p>
-                <p className="text-sm text-muted-foreground mb-4">Drag & drop or click to select</p>
+                <p className="font-medium mb-1">{t.analysis.upload_image}</p>
+                <p className="text-sm text-muted-foreground mb-4">{t.home.start_first_scan}</p>
                 <Link href="/analysis">
                   <Button className="text-lg" data-testid="button-choose-photo">
                     <Upload className="mr-2 h-4 w-4" />
-                    Choose Photo
+                    {t.analysis.upload_image}
                   </Button>
                 </Link>
               </div>
@@ -204,13 +206,13 @@ function Home() {
                 <Link href="/analysis">
                   <Button variant="secondary" className="w-full" data-testid="button-camera">
                     <Camera className="mr-2 h-4 w-4" />
-                    Camera
+                    {t.analysis.take_photo}
                   </Button>
                 </Link>
                 <Link href="/analysis">
                   <Button className="w-full bg-accent hover:bg-accent/90" data-testid="button-gallery">
                     <Images className="mr-2 h-4 w-4" />
-                    Gallery
+                    {t.analysis.select_gallery}
                   </Button>
                 </Link>
               </div>
@@ -222,10 +224,10 @@ function Home() {
             <CardContent className="p-6">
               <div className="flex items-center mb-4">
                 <MessageCircle className="text-2xl text-secondary mr-3" />
-                <h3 className="text-xl font-semibold">Ask KrishiMitra</h3>
+                <h3 className="text-xl font-semibold">{t.home.ask_krishimitra}</h3>
               </div>
               <p className="text-muted-foreground mb-6">
-                Get instant answers about farming, diseases, and crop care from our AI assistant.
+                {t.chat.placeholder}
               </p>
 
               {/* Recent Chat Preview */}
@@ -272,16 +274,16 @@ function Home() {
           <CardContent className="p-6">
             <h3 className="text-xl font-semibold mb-6 flex items-center">
               <History className="text-primary mr-3" />
-              Recent Analysis
+              {t.home.recent_analysis}
             </h3>
 
             {isLoading ? (
               <div className="text-center text-muted-foreground py-8">
-                Loading recent analysis...
+                {t.analysis.analyzing}
               </div>
             ) : !recentResults || recentResults.length === 0 ? (
               <div className="text-center text-muted-foreground py-8" data-testid="text-no-analysis">
-                No analysis results yet. Upload your first crop image to get started!
+                {t.home.no_analysis}
               </div>
             ) : (
               <div className="space-y-4">
@@ -324,13 +326,13 @@ function Home() {
           <CardContent className="p-6">
             <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <CloudRain className="text-accent h-5 w-5" />
-              Live Weather — {profile?.region || "Your Region"}
+              {t.home.weather} — {profile?.region || "Your Region"}
             </h3>
 
             {weatherLoading ? (
-              <div className="text-center text-muted-foreground py-8">Fetching live weather...</div>
+              <div className="text-center text-muted-foreground py-8">{t.analysis.analyzing}</div>
             ) : !weather ? (
-              <div className="text-center text-muted-foreground py-6">Weather data unavailable. Check your connection.</div>
+              <div className="text-center text-muted-foreground py-6">{t.home.weather} — {t.home.no_analysis}</div>
             ) : (
               <div className="space-y-4">
                 {/* Farming alert banner */}
@@ -456,44 +458,52 @@ function Home() {
         {/* Quick Actions */}
         <Card data-testid="card-quick-actions">
           <CardContent className="p-6">
-            <h3 className="text-xl font-semibold mb-6">Quick Actions</h3>
+            <h3 className="text-xl font-semibold mb-6">{t.home.quick_actions}</h3>
             
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Button
-                variant="outline"
-                className="flex flex-col items-center p-4 h-auto hover-elevate"
-                data-testid="button-fertilization"
-              >
-                <FlaskConical className="text-2xl text-primary mb-2" />
-                <span className="text-sm font-medium">Fertilization</span>
-              </Button>
+              <Link href="/analysis" className="w-full">
+                <Button
+                  variant="outline"
+                  className="flex flex-col items-center p-4 h-auto hover-elevate w-full"
+                  data-testid="button-fertilization"
+                >
+                  <Camera className="text-2xl text-primary mb-2" />
+                  <span className="text-sm font-medium">{t.home.crop_analysis}</span>
+                </Button>
+              </Link>
               
-              <Button
-                variant="outline"
-                className="flex flex-col items-center p-4 h-auto hover-elevate"
-                data-testid="button-irrigation"
-              >
-                <Droplets className="text-2xl text-secondary mb-2" />
-                <span className="text-sm font-medium">Irrigation</span>
-              </Button>
+              <Link href="/chat" className="w-full">
+                <Button
+                  variant="outline"
+                  className="flex flex-col items-center p-4 h-auto hover-elevate w-full"
+                  data-testid="button-irrigation"
+                >
+                  <MessageCircle className="text-2xl text-secondary mb-2" />
+                  <span className="text-sm font-medium">{t.home.ask_krishimitra}</span>
+                </Button>
+              </Link>
               
-              <Button
-                variant="outline"
-                className="flex flex-col items-center p-4 h-auto hover-elevate"
-                data-testid="button-pest-control"
-              >
-                <Bug className="text-2xl text-destructive mb-2" />
-                <span className="text-sm font-medium">Pest Control</span>
-              </Button>
+              <Link href="/schemes" className="w-full">
+                <Button
+                  variant="outline"
+                  className="flex flex-col items-center p-4 h-auto hover-elevate w-full"
+                  data-testid="button-schemes"
+                >
+                  <IndianRupee className="text-2xl text-accent mb-2" />
+                  <span className="text-sm font-medium">{t.home.gov_schemes}</span>
+                </Button>
+              </Link>
               
-              <Button
-                variant="outline"
-                className="flex flex-col items-center p-4 h-auto hover-elevate"
-                data-testid="button-calendar"
-              >
-                <CalendarIcon className="text-2xl text-accent mb-2" />
-                <span className="text-sm font-medium">Calendar</span>
-              </Button>
+              <Link href="/support" className="w-full">
+                <Button
+                  variant="outline"
+                  className="flex flex-col items-center p-4 h-auto hover-elevate w-full"
+                  data-testid="button-support"
+                >
+                  <HandHeart className="text-2xl text-destructive mb-2" />
+                  <span className="text-sm font-medium">{t.home.farmer_support}</span>
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
