@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertAnalysisResultSchema, insertChatMessageSchema } from "@shared/schema";
-import { analyzeCropImage, analyzeSoilImage, generateChatResponse } from "./services/openai";
+import { analyzeCropImage, analyzeSoilImage, generateChatResponse, getMandiPrices, getFertilizerAdvice } from "./services/openai";
 import { getWeatherForRegion } from "./services/weather";
 import multer from "multer";
 import rateLimit from "express-rate-limit";
@@ -257,6 +257,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching weather:", error);
       res.status(500).json({ message: "Failed to fetch weather data" });
+    }
+  });
+
+  // ─── Mandi Prices ────────────────────────────────────────────────────────────
+
+  app.get("/api/mandi-prices", async (req, res) => {
+    try {
+      const region = (req.query.region as string) || "Maharashtra";
+      const data = await getMandiPrices(region);
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching mandi prices:", error);
+      res.status(500).json({ message: "Failed to fetch mandi prices" });
+    }
+  });
+
+  // ─── Fertilizer Advice ────────────────────────────────────────────────────────
+
+  app.post("/api/fertilizer-advice", aiLimiter, async (req, res) => {
+    try {
+      const { crop, farmSize, soilType, growthStage, waterSource, region } = req.body;
+      if (!crop) return res.status(400).json({ message: "crop is required" });
+      const advice = await getFertilizerAdvice(
+        crop,
+        parseFloat(farmSize) || 1,
+        soilType || "Loamy",
+        growthStage || "Vegetative",
+        waterSource || "Rain-fed",
+        region || "Maharashtra"
+      );
+      res.json(advice);
+    } catch (error) {
+      console.error("Error getting fertilizer advice:", error);
+      res.status(500).json({ message: "Failed to get fertilizer advice" });
     }
   });
 

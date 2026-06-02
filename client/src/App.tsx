@@ -12,10 +12,14 @@ import Profile from "@/pages/profile";
 import Onboarding from "@/pages/onboarding";
 import SchemesPage from "@/pages/schemes";
 import SupportPage from "@/pages/support";
+import MandiPage from "@/pages/mandi";
+import CropCalendar from "@/pages/calendar";
+import FertilizerCalculator from "@/pages/calculator";
 import AuthPage from "@/pages/auth";
 import BottomNavigation from "@/components/bottom-navigation";
 import { UserProfileContext, useUserProfileState } from "@/hooks/use-user-profile";
 import { LanguageContext, useLanguageState } from "@/hooks/use-language";
+import { ThemeContext, useThemeState } from "@/hooks/use-theme";
 import { useEffect, useState } from "react";
 import { Wifi } from "lucide-react";
 
@@ -52,6 +56,7 @@ function AppShell() {
   const { hasProfile, isLoading, profile } = profileState;
   const langState = useLanguageState(profile?.region);
   const { t } = langState;
+  const themeState = useThemeState();
 
   const AUTH_DECIDED_KEY = "krishimitra_auth_decided";
   const [authDecided, setAuthDecided] = useState(() => {
@@ -65,53 +70,63 @@ function AppShell() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-primary text-lg font-medium">{t.common.loading}</div>
-      </div>
+      <ThemeContext.Provider value={themeState}>
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="text-primary text-lg font-medium">{t.common.loading}</div>
+        </div>
+      </ThemeContext.Provider>
     );
   }
 
   if (!hasProfile) {
     return (
-      <LanguageContext.Provider value={langState}>
-        <UserProfileContext.Provider value={profileState}>
-          <Onboarding />
-        </UserProfileContext.Provider>
-      </LanguageContext.Provider>
+      <ThemeContext.Provider value={themeState}>
+        <LanguageContext.Provider value={langState}>
+          <UserProfileContext.Provider value={profileState}>
+            <Onboarding />
+          </UserProfileContext.Provider>
+        </LanguageContext.Provider>
+      </ThemeContext.Provider>
     );
   }
 
-  // Show auth page once after onboarding (first time user has a profile)
   if (!authDecided) {
     return (
-      <LanguageContext.Provider value={langState}>
-        <AuthPage
-          onSuccess={handleAuthDecision}
-          onGuest={handleAuthDecision}
-        />
-      </LanguageContext.Provider>
+      <ThemeContext.Provider value={themeState}>
+        <LanguageContext.Provider value={langState}>
+          <AuthPage
+            onSuccess={handleAuthDecision}
+            onGuest={handleAuthDecision}
+          />
+        </LanguageContext.Provider>
+      </ThemeContext.Provider>
     );
   }
 
   return (
-    <LanguageContext.Provider value={langState}>
-      <UserProfileContext.Provider value={profileState}>
-        <OfflineBanner t={t} />
-        <div className="min-h-screen bg-background text-foreground pb-16">
-          <Switch>
-            <Route path="/" component={Home} />
-            <Route path="/analysis" component={Analysis} />
-            <Route path="/chat" component={Chat} />
-            <Route path="/history" component={History} />
-            <Route path="/schemes" component={SchemesPage} />
-            <Route path="/support" component={SupportPage} />
-            <Route path="/profile" component={Profile} />
-            <Route component={NotFound} />
-          </Switch>
-          <BottomNavigation />
-        </div>
-      </UserProfileContext.Provider>
-    </LanguageContext.Provider>
+    <ThemeContext.Provider value={themeState}>
+      <LanguageContext.Provider value={langState}>
+        <UserProfileContext.Provider value={profileState}>
+          <OfflineBanner t={t} />
+          <div className="min-h-screen bg-background text-foreground pb-16">
+            <Switch>
+              <Route path="/" component={Home} />
+              <Route path="/analysis" component={Analysis} />
+              <Route path="/chat" component={Chat} />
+              <Route path="/history" component={History} />
+              <Route path="/schemes" component={SchemesPage} />
+              <Route path="/support" component={SupportPage} />
+              <Route path="/mandi" component={MandiPage} />
+              <Route path="/calendar" component={CropCalendar} />
+              <Route path="/calculator" component={FertilizerCalculator} />
+              <Route path="/profile" component={Profile} />
+              <Route component={NotFound} />
+            </Switch>
+            <BottomNavigation />
+          </div>
+        </UserProfileContext.Provider>
+      </LanguageContext.Provider>
+    </ThemeContext.Provider>
   );
 }
 

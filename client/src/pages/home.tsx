@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Sprout, Camera, MessageCircle, Mic, Settings, History, Upload, Images, Calendar, FlaskConical, Droplets, Bug, CalendarIcon, MapPin, CloudRain, TrendingUp, AlertTriangle, ChevronRight, Phone, ExternalLink, ShieldCheck, Sun, Cloud, CloudSun, CloudDrizzle, CloudSnow, CloudLightning, Wind, Thermometer, Droplets as DropIcon, Eye, IndianRupee, HandHeart } from "lucide-react";
+import { Sprout, Camera, MessageCircle, Mic, Settings, History, Upload, Images, Calendar, FlaskConical, Droplets, Bug, CalendarIcon, MapPin, CloudRain, TrendingUp, AlertTriangle, ChevronRight, Phone, ExternalLink, ShieldCheck, Sun, Cloud, CloudSun, CloudDrizzle, CloudSnow, CloudLightning, Wind, Thermometer, Droplets as DropIcon, Eye, IndianRupee, HandHeart, Moon, Store, ClipboardList } from "lucide-react";
 import type { AnalysisResult } from "@shared/schema";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { useLanguage } from "@/hooks/use-language";
+import { useTheme } from "@/hooks/use-theme";
 
 interface WeatherData {
   region: string;
@@ -50,6 +51,7 @@ function WeatherIcon({ icon, className }: { icon: string; className?: string }) 
 function Home() {
   const { profile } = useUserProfile();
   const { t } = useLanguage();
+  const { isDark, toggleTheme } = useTheme();
 
   const { data: recentResults, isLoading } = useQuery<AnalysisResult[]>({
     queryKey: ["/api/analysis-results", "user-1"],
@@ -105,23 +107,27 @@ function Home() {
               <Sprout className="text-2xl" data-testid="icon-logo" />
               <h1 className="text-xl font-bold" data-testid="text-app-title">KrishiMitra</h1>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
               <Button
                 size="icon"
                 variant="ghost"
-                className="text-primary-foreground hover:bg-primary-foreground/20"
-                data-testid="button-voice-toggle"
+                className="text-primary-foreground"
+                onClick={toggleTheme}
+                data-testid="button-theme-toggle"
+                title={isDark ? "Switch to light mode" : "Switch to dark mode"}
               >
-                <Mic className="h-5 w-5" />
+                {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </Button>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-primary-foreground hover:bg-primary-foreground/20"
-                data-testid="button-settings"
-              >
-                <Settings className="h-5 w-5" />
-              </Button>
+              <Link href="/history">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-primary-foreground"
+                  data-testid="button-history"
+                >
+                  <History className="h-5 w-5" />
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
@@ -451,6 +457,43 @@ function Home() {
                   </div>
                 </div>
               </a>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Farmer Tools */}
+        <Card className="mb-8">
+          <CardContent className="p-6">
+            <h3 className="text-xl font-semibold mb-4">Farmer Tools</h3>
+            <div className="grid grid-cols-2 gap-3">
+              <Link href="/mandi" className="w-full">
+                <Button variant="outline" className="flex flex-col items-center p-4 h-auto hover-elevate w-full gap-1">
+                  <Store className="h-6 w-6 text-accent" />
+                  <span className="text-sm font-medium">Mandi Prices</span>
+                  <span className="text-xs text-muted-foreground">Live market rates</span>
+                </Button>
+              </Link>
+              <Link href="/calendar" className="w-full">
+                <Button variant="outline" className="flex flex-col items-center p-4 h-auto hover-elevate w-full gap-1">
+                  <CalendarIcon className="h-6 w-6 text-primary" />
+                  <span className="text-sm font-medium">Crop Calendar</span>
+                  <span className="text-xs text-muted-foreground">Sowing & harvest</span>
+                </Button>
+              </Link>
+              <Link href="/calculator" className="w-full">
+                <Button variant="outline" className="flex flex-col items-center p-4 h-auto hover-elevate w-full gap-1">
+                  <FlaskConical className="h-6 w-6 text-secondary" />
+                  <span className="text-sm font-medium">Fertilizer Calc</span>
+                  <span className="text-xs text-muted-foreground">NPK recommendations</span>
+                </Button>
+              </Link>
+              <Link href="/history" className="w-full">
+                <Button variant="outline" className="flex flex-col items-center p-4 h-auto hover-elevate w-full gap-1">
+                  <ClipboardList className="h-6 w-6 text-muted-foreground" />
+                  <span className="text-sm font-medium">Analysis History</span>
+                  <span className="text-xs text-muted-foreground">Past scans & charts</span>
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>

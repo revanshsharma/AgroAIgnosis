@@ -437,6 +437,185 @@ function analyzeSoilVisually(): {
   };
 }
 
+// ─── Mandi Prices ─────────────────────────────────────────────────────────────
+
+export interface MandiPrice {
+  crop: string;
+  market: string;
+  minPrice: number;
+  maxPrice: number;
+  modalPrice: number;
+  unit: string;
+  trend: "up" | "down" | "stable";
+  changePercent: number;
+}
+
+export interface MandiData {
+  region: string;
+  date: string;
+  prices: MandiPrice[];
+}
+
+export async function getMandiPrices(region: string): Promise<MandiData> {
+  const today = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+
+  if (genAI) {
+    try {
+      const prompt = `Generate realistic mandi (agricultural market) prices for ${region}, India for ${today}.
+Return a JSON object with this exact structure:
+{
+  "region": "${region}",
+  "date": "${today}",
+  "prices": [
+    {
+      "crop": "crop name",
+      "market": "market name in ${region}",
+      "minPrice": minimum price as integer,
+      "maxPrice": maximum price as integer,
+      "modalPrice": modal/average price as integer,
+      "unit": "quintal",
+      "trend": "up|down|stable",
+      "changePercent": change percentage as integer (1-8)
+    }
+  ]
+}
+
+Include 16 crops commonly grown in ${region}: mix of cereals, pulses, vegetables, oilseeds, fruits, and spices.
+Use realistic 2024-2025 Indian market prices in INR per quintal (or kg for vegetables/fruits).
+Prices should reflect current seasonal trends for ${region}.`;
+
+      const response = await genAI.models.generateContent({
+        model: "gemini-2.5-flash",
+        config: { responseMimeType: "application/json" },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+      });
+
+      const data = JSON.parse(response.text);
+      if (data?.prices?.length) return data;
+    } catch (err) {
+      console.warn("Gemini mandi prices failed:", err);
+    }
+  }
+
+  // Fallback static data
+  return {
+    region,
+    date: today,
+    prices: [
+      { crop: "Wheat", market: `${region} APMC`, minPrice: 1950, maxPrice: 2200, modalPrice: 2100, unit: "quintal", trend: "stable", changePercent: 0 },
+      { crop: "Rice", market: `${region} APMC`, minPrice: 2100, maxPrice: 2600, modalPrice: 2400, unit: "quintal", trend: "up", changePercent: 3 },
+      { crop: "Onion", market: `${region} APMC`, minPrice: 800, maxPrice: 1400, modalPrice: 1100, unit: "quintal", trend: "down", changePercent: 5 },
+      { crop: "Tomato", market: `${region} APMC`, minPrice: 600, maxPrice: 1200, modalPrice: 900, unit: "quintal", trend: "up", changePercent: 8 },
+      { crop: "Potato", market: `${region} APMC`, minPrice: 700, maxPrice: 1100, modalPrice: 900, unit: "quintal", trend: "stable", changePercent: 1 },
+      { crop: "Soybean", market: `${region} APMC`, minPrice: 4100, maxPrice: 4600, modalPrice: 4350, unit: "quintal", trend: "up", changePercent: 2 },
+      { crop: "Cotton", market: `${region} APMC`, minPrice: 6200, maxPrice: 7100, modalPrice: 6700, unit: "quintal", trend: "up", changePercent: 4 },
+      { crop: "Turmeric", market: `${region} APMC`, minPrice: 9000, maxPrice: 12000, modalPrice: 10500, unit: "quintal", trend: "up", changePercent: 6 },
+      { crop: "Maize", market: `${region} APMC`, minPrice: 1700, maxPrice: 2000, modalPrice: 1850, unit: "quintal", trend: "stable", changePercent: 1 },
+      { crop: "Chilli", market: `${region} APMC`, minPrice: 8000, maxPrice: 14000, modalPrice: 11000, unit: "quintal", trend: "down", changePercent: 3 },
+      { crop: "Groundnut", market: `${region} APMC`, minPrice: 4800, maxPrice: 5600, modalPrice: 5200, unit: "quintal", trend: "stable", changePercent: 0 },
+      { crop: "Gram", market: `${region} APMC`, minPrice: 4800, maxPrice: 5400, modalPrice: 5100, unit: "quintal", trend: "up", changePercent: 2 },
+    ],
+  };
+}
+
+// ─── Fertilizer Advice ────────────────────────────────────────────────────────
+
+export interface FertilizerAdvice {
+  cropName: string;
+  summary: string;
+  npkRecommendation: { nitrogen: string; phosphorus: string; potassium: string; timing: string };
+  organicOptions: string[];
+  chemicalFertilizers: { name: string; dose: string; timing: string }[];
+  pesticides: { name: string; dose: string; purpose: string }[];
+  applicationSchedule: string[];
+  cautions: string[];
+}
+
+export async function getFertilizerAdvice(
+  crop: string, farmSize: number, soilType: string,
+  growthStage: string, waterSource: string, region: string
+): Promise<FertilizerAdvice> {
+  if (genAI) {
+    try {
+      const prompt = `You are an expert agronomist for Indian farming. Provide fertilizer and pest management advice for:
+- Crop: ${crop}
+- Farm Size: ${farmSize} acres
+- Soil Type: ${soilType}
+- Current Stage: ${growthStage}
+- Water Source: ${waterSource}
+- Region: ${region}
+
+Return JSON with this exact structure:
+{
+  "cropName": "${crop} (${farmSize} acres, ${soilType} soil)",
+  "summary": "2-3 sentence overview tailored to the specific farm situation",
+  "npkRecommendation": {
+    "nitrogen": "X kg/acre",
+    "phosphorus": "X kg/acre",
+    "potassium": "X kg/acre",
+    "timing": "when and how to apply"
+  },
+  "organicOptions": ["option1", "option2", "option3", "option4"],
+  "chemicalFertilizers": [
+    { "name": "fertilizer name", "dose": "X kg/acre", "timing": "when to apply" }
+  ],
+  "pesticides": [
+    { "name": "pesticide/fungicide name", "dose": "dose", "purpose": "what problem it solves" }
+  ],
+  "applicationSchedule": ["Week 1: ...", "Week 4: ...", "Week 8: ..."],
+  "cautions": ["caution1", "caution2", "caution3"]
+}
+
+Use realistic Indian agrochemical products and doses. All numbers should be for ${farmSize} acres total.`;
+
+      const response = await genAI.models.generateContent({
+        model: "gemini-2.5-flash",
+        config: { responseMimeType: "application/json" },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+      });
+
+      const data = JSON.parse(response.text);
+      if (data?.cropName) return data;
+    } catch (err) {
+      console.warn("Gemini fertilizer advice failed:", err);
+    }
+  }
+
+  // Fallback
+  return {
+    cropName: `${crop} (${farmSize} acres)`,
+    summary: `For ${crop} on ${farmSize} acres of ${soilType} soil in ${growthStage} stage, balanced NPK fertilization with organic supplements is recommended.`,
+    npkRecommendation: {
+      nitrogen: `${Math.round(farmSize * 50)} kg`,
+      phosphorus: `${Math.round(farmSize * 25)} kg`,
+      potassium: `${Math.round(farmSize * 25)} kg`,
+      timing: "Apply at sowing and in 2-3 splits during growing season",
+    },
+    organicOptions: ["Well-rotted FYM @ 5 tonnes/acre", "Vermicompost @ 1 tonne/acre", "Neem cake @ 200 kg/acre", "Rhizobium biofertilizer for legumes"],
+    chemicalFertilizers: [
+      { name: "DAP (18:46:0)", dose: `${Math.round(farmSize * 50)} kg`, timing: "At sowing" },
+      { name: "Urea (46% N)", dose: `${Math.round(farmSize * 65)} kg`, timing: "Split — at 30 and 60 days" },
+      { name: "MOP (60% K₂O)", dose: `${Math.round(farmSize * 30)} kg`, timing: "At sowing" },
+    ],
+    pesticides: [
+      { name: "Chlorpyrifos 20EC", dose: "2 ml/litre water", purpose: "Soil insects and termites" },
+      { name: "Mancozeb 75WP", dose: "2.5 g/litre water", purpose: "Fungal diseases" },
+      { name: "Imidacloprid 17.8SL", dose: "0.5 ml/litre water", purpose: "Sucking pests and aphids" },
+    ],
+    applicationSchedule: [
+      "At sowing: Apply full dose of DAP, MOP, and FYM",
+      "30 days: First split dose of Urea + foliar micronutrient spray",
+      "60 days: Second split dose of Urea",
+      "As needed: Pesticide spray on pest/disease detection",
+    ],
+    cautions: [
+      "Always wear gloves and mask when applying chemical fertilizers",
+      "Do not apply urea during waterlogged conditions",
+      "Maintain 15-day gap between pesticide sprays",
+    ],
+  };
+}
+
 // Helper functions for chat
 function generateRelatedTopics(message: string): string[] {
   const messageLower = message.toLowerCase();
