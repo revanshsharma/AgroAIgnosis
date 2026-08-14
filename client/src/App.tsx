@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -15,7 +15,9 @@ import MandiPage from "@/pages/mandi";
 import CropCalendar from "@/pages/calendar";
 import FertilizerCalculator from "@/pages/calculator";
 import AuthPage from "@/pages/auth";
+import WhyKrishiMitra from "@/pages/why-krishimitra";
 import BottomNavigation from "@/components/bottom-navigation";
+import VoiceNavigation from "@/components/voice-navigation";
 import { UserProfileContext, useUserProfileState } from "@/hooks/use-user-profile";
 import type { UserProfile } from "@/hooks/use-user-profile";
 import { LanguageContext, useLanguageState } from "@/hooks/use-language";
@@ -64,6 +66,8 @@ function OfflineBanner({ t }: { t: any }) {
 function AppShell() {
   const profileState = useUserProfileState();
   const { hasProfile, isLoading, profile } = profileState;
+  const [location] = useLocation();
+  const isPublicDemoPage = location === "/why-krishimitra";
   const langState = useLanguageState(profile?.region);
   const { t } = langState;
   const themeState = useThemeState();
@@ -97,7 +101,7 @@ function AppShell() {
     );
   }
 
-  if (!authDecided || !hasProfile) {
+  if ((!authDecided || !hasProfile) && !isPublicDemoPage) {
     return (
       <ThemeContext.Provider value={themeState}>
         <LanguageContext.Provider value={langState}>
@@ -114,6 +118,7 @@ function AppShell() {
       <LanguageContext.Provider value={langState}>
         <UserProfileContext.Provider value={profileState}>
           <OfflineBanner t={t} />
+            {hasProfile && authDecided && <VoiceNavigation />}
           <div className="min-h-screen bg-background text-foreground pb-16">
             <Switch>
               <Route path="/" component={Home} />
@@ -125,10 +130,11 @@ function AppShell() {
               <Route path="/mandi" component={MandiPage} />
               <Route path="/calendar" component={CropCalendar} />
               <Route path="/calculator" component={FertilizerCalculator} />
+              <Route path="/why-krishimitra" component={WhyKrishiMitra} />
               <Route path="/profile" component={Profile} />
               <Route component={NotFound} />
             </Switch>
-            <BottomNavigation />
+            {hasProfile && authDecided && <BottomNavigation />}
           </div>
         </UserProfileContext.Provider>
       </LanguageContext.Provider>

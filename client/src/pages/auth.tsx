@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -175,6 +176,12 @@ export default function AuthPage({ onSuccess, initialProfile }: AuthPageProps) {
           </div>
         </CardContent>
       </Card>
+      <Link href="/why-krishimitra">
+        <Button variant="ghost" className="mt-3 text-primary font-medium">
+          Why KrishiMitra for farmers?
+          <ArrowRight className="ml-2 h-4 w-4" />
+        </Button>
+      </Link>
     </div>
   );
 }

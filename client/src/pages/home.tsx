@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Sprout, Camera, MessageCircle, Mic, Settings, History, Upload, Images, Calendar, FlaskConical, Droplets, Bug, CalendarIcon, MapPin, CloudRain, TrendingUp, AlertTriangle, ChevronRight, Phone, ExternalLink, ShieldCheck, Sun, Cloud, CloudSun, CloudDrizzle, CloudSnow, CloudLightning, Wind, Thermometer, Droplets as DropIcon, Eye, IndianRupee, HandHeart, Moon, Store, ClipboardList } from "lucide-react";
+import { Sprout, Camera, MessageCircle, Mic, Settings, History, Upload, Images, Calendar, FlaskConical, Droplets, Bug, CalendarIcon, MapPin, CloudRain, TrendingUp, AlertTriangle, ChevronRight, Phone, ExternalLink, ShieldCheck, Sun, Cloud, CloudSun, CloudDrizzle, CloudSnow, CloudLightning, Wind, Thermometer, Droplets as DropIcon, Eye, IndianRupee, HandHeart, Moon, Store, ClipboardList, Info, ArrowRight } from "lucide-react";
 import type { AnalysisResult } from "@shared/schema";
 import { useUserProfile } from "@/hooks/use-user-profile";
 import { useLanguage } from "@/hooks/use-language";
@@ -118,6 +118,17 @@ function Home() {
               >
                 {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
               </Button>
+              <Link href="/why-krishimitra">
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="text-primary-foreground"
+                  data-testid="button-why-krishimitra"
+                  title="Why KrishiMitra"
+                >
+                  <Info className="h-5 w-5" />
+                </Button>
+              </Link>
               <Link href="/history">
                 <Button
                   size="icon"
@@ -274,6 +285,27 @@ function Home() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Hackathon story */}
+        <Card className="mb-8 overflow-hidden border-primary/30 bg-gradient-to-r from-primary/10 to-secondary/10" data-testid="card-why-krishimitra">
+          <CardContent className="p-6">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold text-primary mb-1">Built for Indian farmers</p>
+                <h3 className="text-xl font-semibold mb-1">More than a chatbot — a farming companion</h3>
+                <p className="text-sm text-muted-foreground">
+                  Voice, crop photos, local weather, mandi prices and schemes in one simple place.
+                </p>
+              </div>
+              <Link href="/why-krishimitra">
+                <Button variant="outline" className="shrink-0" data-testid="button-see-why">
+                  See why it helps
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Recent Analysis Results */}
         <Card className="mb-8" data-testid="card-recent-results">
