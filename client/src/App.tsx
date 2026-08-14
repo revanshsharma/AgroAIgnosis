@@ -9,7 +9,6 @@ import Analysis from "@/pages/analysis";
 import Chat from "@/pages/chat";
 import History from "@/pages/history";
 import Profile from "@/pages/profile";
-import Onboarding from "@/pages/onboarding";
 import SchemesPage from "@/pages/schemes";
 import SupportPage from "@/pages/support";
 import MandiPage from "@/pages/mandi";
@@ -18,6 +17,7 @@ import FertilizerCalculator from "@/pages/calculator";
 import AuthPage from "@/pages/auth";
 import BottomNavigation from "@/components/bottom-navigation";
 import { UserProfileContext, useUserProfileState } from "@/hooks/use-user-profile";
+import type { UserProfile } from "@/hooks/use-user-profile";
 import { LanguageContext, useLanguageState } from "@/hooks/use-language";
 import { ThemeContext, useThemeState } from "@/hooks/use-theme";
 import { useEffect, useState } from "react";
@@ -68,6 +68,15 @@ function AppShell() {
     setAuthDecided(true);
   };
 
+  const handleAuthSuccess = (authProfile: Pick<UserProfile, "name" | "region" | "phone">) => {
+    profileState.saveProfile({
+      ...authProfile,
+      joinedDate: profileState.profile?.joinedDate ||
+        new Date().toLocaleDateString("en-IN", { month: "long", year: "numeric" }),
+    });
+    handleAuthDecision();
+  };
+
   if (isLoading) {
     return (
       <ThemeContext.Provider value={themeState}>
@@ -78,26 +87,13 @@ function AppShell() {
     );
   }
 
-  if (!hasProfile) {
+  if (!authDecided || !hasProfile) {
     return (
       <ThemeContext.Provider value={themeState}>
         <LanguageContext.Provider value={langState}>
           <UserProfileContext.Provider value={profileState}>
-            <Onboarding />
+            <AuthPage onSuccess={handleAuthSuccess} initialProfile={profile} />
           </UserProfileContext.Provider>
-        </LanguageContext.Provider>
-      </ThemeContext.Provider>
-    );
-  }
-
-  if (!authDecided) {
-    return (
-      <ThemeContext.Provider value={themeState}>
-        <LanguageContext.Provider value={langState}>
-          <AuthPage
-            onSuccess={handleAuthDecision}
-            onGuest={handleAuthDecision}
-          />
         </LanguageContext.Provider>
       </ThemeContext.Provider>
     );

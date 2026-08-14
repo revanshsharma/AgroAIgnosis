@@ -3,12 +3,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Leaf, Shield, Phone } from "lucide-react";
+import { Leaf, ShieldCheck, Phone, MapPin, UserRound, ArrowRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/hooks/use-language";
 import { apiRequest } from "@/lib/queryClient";
+import type { UserProfile } from "@/hooks/use-user-profile";
 
 const INDIAN_STATES = [
   "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh",
@@ -20,165 +20,105 @@ const INDIAN_STATES = [
 ];
 
 interface AuthPageProps {
-  onSuccess: () => void;
-  onGuest: () => void;
+  onSuccess: (profile: Pick<UserProfile, "name" | "region" | "phone">) => void;
+  initialProfile?: UserProfile | null;
 }
 
-export default function AuthPage({ onSuccess, onGuest }: AuthPageProps) {
+export default function AuthPage({ onSuccess, initialProfile }: AuthPageProps) {
   const { t } = useLanguage();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
 
-  const [loginForm, setLoginForm] = useState({ phone: "", pin: "" });
-  const [registerForm, setRegisterForm] = useState({ phone: "", pin: "", name: "", region: "" });
+  const [form, setForm] = useState({
+    name: initialProfile?.name || "",
+    phone: initialProfile?.phone || "",
+    region: initialProfile?.region || "",
+    pin: "",
+  });
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleAccess = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!loginForm.phone || !loginForm.pin) return;
-    if (loginForm.pin.length !== 4) {
-      toast({ title: "Invalid PIN", description: "PIN must be 4 digits", variant: "destructive" });
+    if (!form.name.trim() || !form.phone || !form.region || !form.pin) {
+      toast({ title: "Almost there", description: "Please fill in your name, mobile number, state and PIN.", variant: "destructive" });
+      return;
+    }
+    if (form.phone.length !== 10) {
+      toast({ title: "Check your mobile number", description: "Please enter all 10 digits.", variant: "destructive" });
+      return;
+    }
+    if (form.pin.length !== 4) {
+      toast({ title: "Check your PIN", description: "Your PIN should have 4 digits.", variant: "destructive" });
       return;
     }
     setLoading(true);
     try {
-      await apiRequest("POST", "/api/auth/login", {
-        phone: loginForm.phone,
-        pin: loginForm.pin,
-      });
-      toast({ title: t.auth.welcome_back + "!" });
-      onSuccess();
+      const response = await apiRequest("POST", "/api/auth/access", form);
+      const user = await response.json();
+      toast({ title: `Welcome, ${user.name}!` });
+      onSuccess(user);
     } catch (err: any) {
-      toast({ title: "Login failed", description: err.message || "Invalid phone or PIN", variant: "destructive" });
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!registerForm.phone || !registerForm.pin || !registerForm.name || !registerForm.region) {
-      toast({ title: "Please fill all fields", variant: "destructive" });
-      return;
-    }
-    if (registerForm.pin.length !== 4) {
-      toast({ title: "Invalid PIN", description: "PIN must be 4 digits", variant: "destructive" });
-      return;
-    }
-    setLoading(true);
-    try {
-      await apiRequest("POST", "/api/auth/register", registerForm);
-      toast({ title: t.auth.create_account, description: `Welcome, ${registerForm.name}!` });
-      onSuccess();
-    } catch (err: any) {
-      toast({ title: "Registration failed", description: err.message || "Phone already registered", variant: "destructive" });
+      toast({ title: "We couldn't open your account", description: err.message || "Please check your details and try again.", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-primary/10 to-background flex flex-col items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-b from-primary/10 via-background to-background flex flex-col items-center justify-center p-4">
       {/* Logo */}
-      <div className="flex flex-col items-center mb-8">
-        <div className="w-16 h-16 bg-primary rounded-2xl flex items-center justify-center mb-3 shadow-lg">
+      <div className="flex flex-col items-center mb-6 text-center">
+        <div className="w-16 h-16 bg-primary rounded-full flex items-center justify-center mb-3 shadow-lg">
           <Leaf className="h-9 w-9 text-white" />
         </div>
         <h1 className="text-2xl font-bold text-foreground">KrishiMitra</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          {t.auth.secure_hint}
-        </p>
+        <p className="text-muted-foreground text-sm mt-1">Your friendly farming companion</p>
       </div>
 
-      <Card className="w-full max-w-sm">
+      <Card className="w-full max-w-sm shadow-sm">
         <CardHeader className="pb-2">
-          <CardTitle className="text-center text-lg">{t.auth.create_account}</CardTitle>
+          <CardTitle className="text-xl">Welcome, farmer</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Enter your details once to get farming advice made for you.
+          </p>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="login">
-            <TabsList className="w-full mb-4">
-              <TabsTrigger value="login" className="flex-1">{t.auth.login}</TabsTrigger>
-              <TabsTrigger value="register" className="flex-1">{t.auth.register}</TabsTrigger>
-            </TabsList>
-
-            {/* Login */}
-            <TabsContent value="login">
-              <form onSubmit={handleLogin} className="space-y-4">
+              <form onSubmit={handleAccess} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="login-phone">
-                    <Phone className="h-3 w-3 inline mr-1" />
-                    {t.auth.phone}
+                  <Label htmlFor="farmer-name">
+                    <UserRound className="h-3 w-3 inline mr-1" />
+                    Your name
                   </Label>
                   <Input
-                    id="login-phone"
+                    id="farmer-name"
+                    placeholder="e.g. Ramesh Patil"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="farmer-phone">
+                    <Phone className="h-3 w-3 inline mr-1" />
+                    Mobile number
+                  </Label>
+                  <Input
+                    id="farmer-phone"
                     type="tel"
                     placeholder="10-digit mobile number"
                     maxLength={10}
-                    value={loginForm.phone}
-                    onChange={(e) => setLoginForm({ ...loginForm, phone: e.target.value.replace(/\D/g, "") })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-pin">{t.auth.pin}</Label>
-                  <Input
-                    id="login-pin"
-                    type="password"
-                    placeholder="••••"
-                    maxLength={4}
                     inputMode="numeric"
-                    value={loginForm.pin}
-                    onChange={(e) => setLoginForm({ ...loginForm, pin: e.target.value.replace(/\D/g, "") })}
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? t.common.loading : t.auth.submit_login}
-                </Button>
-              </form>
-            </TabsContent>
-
-            {/* Register */}
-            <TabsContent value="register">
-              <form onSubmit={handleRegister} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="reg-name">{t.auth.name}</Label>
-                  <Input
-                    id="reg-name"
-                    placeholder="Your name"
-                    value={registerForm.name}
-                    onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
+                    autoComplete="tel"
+                    value={form.phone}
+                    onChange={(e) => setForm({ ...form, phone: e.target.value.replace(/\D/g, "") })}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="reg-phone">
-                    <Phone className="h-3 w-3 inline mr-1" />
-                    {t.auth.phone}
+                  <Label>
+                    <MapPin className="h-3 w-3 inline mr-1" />
+                    Your state
                   </Label>
-                  <Input
-                    id="reg-phone"
-                    type="tel"
-                    placeholder="10-digit mobile number"
-                    maxLength={10}
-                    value={registerForm.phone}
-                    onChange={(e) => setRegisterForm({ ...registerForm, phone: e.target.value.replace(/\D/g, "") })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="reg-pin">{t.auth.pin}</Label>
-                  <Input
-                    id="reg-pin"
-                    type="password"
-                    placeholder="••••"
-                    maxLength={4}
-                    inputMode="numeric"
-                    value={registerForm.pin}
-                    onChange={(e) => setRegisterForm({ ...registerForm, pin: e.target.value.replace(/\D/g, "") })}
-                  />
-                  <p className="text-xs text-muted-foreground">{t.auth.pin_hint}</p>
-                </div>
-                <div className="space-y-2">
-                  <Label>{t.auth.region}</Label>
-                  <Select value={registerForm.region} onValueChange={(v) => setRegisterForm({ ...registerForm, region: v })}>
+                  <Select value={form.region} onValueChange={(region) => setForm({ ...form, region })}>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select your state" />
+                      <SelectValue placeholder="Choose your state" />
                     </SelectTrigger>
                     <SelectContent>
                       {INDIAN_STATES.map((s) => (
@@ -187,24 +127,30 @@ export default function AuthPage({ onSuccess, onGuest }: AuthPageProps) {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label htmlFor="farmer-pin">4-digit PIN</Label>
+                  <Input
+                    id="farmer-pin"
+                    type="password"
+                    placeholder="Choose a PIN you can remember"
+                    maxLength={4}
+                    inputMode="numeric"
+                    autoComplete="current-password"
+                    value={form.pin}
+                    onChange={(e) => setForm({ ...form, pin: e.target.value.replace(/\D/g, "") })}
+                  />
+                  <p className="text-xs text-muted-foreground">Use the same PIN when you come back.</p>
+                </div>
                 <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? t.common.loading : t.auth.submit_register}
+                  {loading ? t.common.loading : "Continue to KrishiMitra"}
+                  {!loading && <ArrowRight className="ml-2 h-4 w-4" />}
                 </Button>
               </form>
-            </TabsContent>
-          </Tabs>
 
           {/* Security note */}
           <div className="flex items-center gap-2 mt-4 p-3 bg-muted/50 rounded-md">
-            <Shield className="h-4 w-4 text-muted-foreground shrink-0" />
-            <p className="text-xs text-muted-foreground">{t.auth.secure_hint}</p>
-          </div>
-
-          {/* Guest option */}
-          <div className="mt-4 text-center">
-            <Button variant="ghost" size="sm" className="text-muted-foreground" onClick={onGuest}>
-              {t.auth.guest}
-            </Button>
+            <ShieldCheck className="h-4 w-4 text-muted-foreground shrink-0" />
+            <p className="text-xs text-muted-foreground">Your details are kept private and used only to personalise your advice.</p>
           </div>
         </CardContent>
       </Card>

@@ -75,6 +75,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // One simple entry point for farmers: sign in if the phone is known,
+  // otherwise create the account with the details from the same form.
+  app.post("/api/auth/access", authLimiter, async (req, res) => {
+    try {
+      const { phone, pin, name, region } = req.body;
+      if (!phone || !pin) {
+        return res.status(400).json({ message: "Please enter your mobile number and PIN" });
+      }
+      if (!/^\d{10}$/.test(phone)) {
+        return res.status(400).json({ message: "Mobile number must be 10 digits" });
+      }
+      if (!/^\d{4}$/.test(pin)) {
+        return res.status(400).json({ message: "PIN must be exactly 4 digits" });
+      }
+
+      const existingUser = await storage.getAuthUserByPhone(phone);
+      const user = existingUser
+        ? await storage.verifyAuthUser(phone, pin)
+        : (name && region ? await storage.createAuthUser(phone, pin, name.trim(), region) : null);
+
+      if (!user) {
+        return res.status(existingUser ? 401 : 400).json({
+          message: existingUser
+            ? "That mobile number or PIN is not correct"
+            : "Please enter your name and state to create your account",
+        });
+      }
+
+      (req.session as any).userId = user.id;
+      (req.session as any).phone = user.phone;
+      res.json({ id: user.id, name: user.name, region: user.region, phone: user.phone });
+    } catch (error: any) {
+      console.error("Account access error:", error);
+      res.status(400).json({ message: error.message || "Could not open your account" });
+    }
+  });
+
   app.post("/api/auth/logout", (req, res) => {
     req.session.destroy(() => {
       res.json({ message: "Logged out" });
