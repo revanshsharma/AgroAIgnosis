@@ -1,4 +1,4 @@
-const CACHE_NAME = 'krishimitra-v1';
+const CACHE_NAME = 'krishimitra-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

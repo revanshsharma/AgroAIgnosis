@@ -23,10 +23,20 @@ import { ThemeContext, useThemeState } from "@/hooks/use-theme";
 import { useEffect, useState } from "react";
 import { Wifi } from "lucide-react";
 
-// Register service worker for offline support
+// Offline caching is useful in production, but cache-first service workers
+// make the Replit development preview show stale React modules.
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    if (import.meta.env.DEV) {
+      navigator.serviceWorker.getRegistrations()
+        .then((registrations) => registrations.forEach((registration) => registration.unregister()))
+        .catch(() => {});
+      if ('caches' in window) {
+        caches.keys().then((keys) => keys.forEach((key) => caches.delete(key))).catch(() => {});
+      }
+    } else {
+      navigator.serviceWorker.register('/sw.js').catch(() => {});
+    }
   });
 }
 
