@@ -2,9 +2,10 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertAnalysisResultSchema, insertChatMessageSchema } from "@shared/schema";
-import { analyzeCropImage, analyzeSoilImage, generateChatResponse } from "./services/openai";
+import { analyzeCropImage, analyzeSoilImage, generateChatResponse, getMandiPrices, getFertilizerAdvice } from "./services/openai";
 import { getWeatherForRegion } from "./services/weather";
 import multer from "multer";
+import rateLimit from "express-rate-limit";
 
 // Configure multer for memory storage
 const upload = multer({ 
@@ -12,9 +13,126 @@ const upload = multer({
   limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
 });
 
+// Rate limiters
+const aiLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 30,
+  message: { message: "Too many requests. Please try again after an hour." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 20,
+  message: { message: "Too many login attempts. Please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Image analysis endpoint
-  app.post("/api/analyze-image", upload.single('image'), async (req, res) => {
+
+  // ─── Auth Routes ─────────────────────────────────────────────────────────────
+
+  app.post("/api/auth/register", authLimiter, async (req, res) => {
+    try {
+      const { phone, pin, name, region } = req.body;
+      if (!phone || !pin || !name || !region) {
+        return res.status(400).json({ message: "Missing required fields: phone, pin, name, region" });
+      }
+      if (pin.length !== 4 || !/^\d{4}$/.test(pin)) {
+        return res.status(400).json({ message: "PIN must be exactly 4 digits" });
+      }
+      if (!/^\d{10}$/.test(phone)) {
+        return res.status(400).json({ message: "Phone must be a 10-digit number" });
+      }
+      const user = await storage.createAuthUser(phone, pin, name, region);
+      (req.session as any).userId = user.id;
+      (req.session as any).phone = user.phone;
+      res.json({ id: user.id, name: user.name, region: user.region, phone: user.phone });
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      res.status(400).json({ message: error.message || "Registration failed" });
+    }
+  });
+
+  app.post("/api/auth/login", authLimiter, async (req, res) => {
+    try {
+      const { phone, pin } = req.body;
+      if (!phone || !pin) {
+        return res.status(400).json({ message: "Missing phone or PIN" });
+      }
+      const user = await storage.verifyAuthUser(phone, pin);
+      if (!user) {
+        return res.status(401).json({ message: "Invalid phone number or PIN" });
+      }
+      (req.session as any).userId = user.id;
+      (req.session as any).phone = user.phone;
+      res.json({ id: user.id, name: user.name, region: user.region, phone: user.phone });
+    } catch (error: any) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  // One simple entry point for farmers: sign in if the phone is known,
+  // otherwise create the account with the details from the same form.
+  app.post("/api/auth/access", authLimiter, async (req, res) => {
+    try {
+      const { phone, pin, name, region } = req.body;
+      if (!phone || !pin) {
+        return res.status(400).json({ message: "Please enter your mobile number and PIN" });
+      }
+      if (!/^\d{10}$/.test(phone)) {
+        return res.status(400).json({ message: "Mobile number must be 10 digits" });
+      }
+      if (!/^\d{4}$/.test(pin)) {
+        return res.status(400).json({ message: "PIN must be exactly 4 digits" });
+      }
+
+      const existingUser = await storage.getAuthUserByPhone(phone);
+      const user = existingUser
+        ? await storage.verifyAuthUser(phone, pin)
+        : (name && region ? await storage.createAuthUser(phone, pin, name.trim(), region) : null);
+
+      if (!user) {
+        return res.status(existingUser ? 401 : 400).json({
+          message: existingUser
+            ? "That mobile number or PIN is not correct"
+            : "Please enter your name and state to create your account",
+        });
+      }
+
+      (req.session as any).userId = user.id;
+      (req.session as any).phone = user.phone;
+      res.json({ id: user.id, name: user.name, region: user.region, phone: user.phone });
+    } catch (error: any) {
+      console.error("Account access error:", error);
+      res.status(400).json({ message: error.message || "Could not open your account" });
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.destroy(() => {
+      res.json({ message: "Logged out" });
+    });
+  });
+
+  app.get("/api/auth/me", async (req, res) => {
+    const userId = (req.session as any)?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+    const user = await storage.getAuthUser(userId);
+    if (!user) {
+      return res.status(401).json({ message: "User not found" });
+    }
+    res.json({ id: user.id, name: user.name, region: user.region, phone: user.phone });
+  });
+
+  // ─── Image Analysis ───────────────────────────────────────────────────────────
+
+  app.post("/api/analyze-image", aiLimiter, upload.single('image'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No image file provided" });
@@ -27,7 +145,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Missing required fields: analysisType, userId" });
       }
 
-      // Convert buffer to base64
       const base64Image = req.file.buffer.toString('base64');
       const mimeType = req.file.mimetype || 'image/jpeg';
       
@@ -74,10 +191,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid analysis type. Must be 'crop' or 'soil'" });
       }
 
-      // Validate and store the result
       const validatedData = insertAnalysisResultSchema.parse(resultData);
       const savedResult = await storage.createAnalysisResult(validatedData);
-
       res.json(savedResult);
     } catch (error) {
       console.error("Error analyzing image:", error);
@@ -92,12 +207,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const { limit } = req.query;
-      
       const results = await storage.getUserAnalysisResults(
         userId, 
         limit ? parseInt(limit as string) : undefined
       );
-      
       res.json(results);
     } catch (error) {
       console.error("Error fetching analysis results:", error);
@@ -110,11 +223,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { id } = req.params;
       const result = await storage.getAnalysisResult(id);
-      
       if (!result) {
         return res.status(404).json({ message: "Analysis result not found" });
       }
-      
       res.json(result);
     } catch (error) {
       console.error("Error fetching analysis result:", error);
@@ -122,8 +233,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Chat endpoint
-  app.post("/api/chat", async (req, res) => {
+  // ─── Chat ─────────────────────────────────────────────────────────────────────
+
+  app.post("/api/chat", aiLimiter, async (req, res) => {
     try {
       const { message, userId, isVoice, userRegion, userName, primaryCrop } = req.body;
       
@@ -131,10 +243,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Missing required fields: message, userId" });
       }
 
-      // Generate AI response
       const chatResponse = await generateChatResponse(message, userRegion, userName, primaryCrop);
       
-      // Store chat message and response
       const chatData = {
         userId,
         message,
@@ -163,12 +273,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { userId } = req.params;
       const { limit } = req.query;
-      
       const messages = await storage.getUserChatMessages(
         userId, 
         limit ? parseInt(limit as string) : undefined
       );
-      
       res.json(messages);
     } catch (error) {
       console.error("Error fetching chat history:", error);
@@ -176,7 +284,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Weather endpoint — uses Open-Meteo (free, no key required)
+  // ─── Weather ──────────────────────────────────────────────────────────────────
+
   app.get("/api/weather", async (req, res) => {
     try {
       const region = (req.query.region as string) || "Maharashtra";
@@ -188,7 +297,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Health check endpoint
+  // ─── Mandi Prices ────────────────────────────────────────────────────────────
+
+  app.get("/api/mandi-prices", async (req, res) => {
+    try {
+      const region = (req.query.region as string) || "Maharashtra";
+      const data = await getMandiPrices(region);
+      res.json(data);
+    } catch (error) {
+      console.error("Error fetching mandi prices:", error);
+      res.status(500).json({ message: "Failed to fetch mandi prices" });
+    }
+  });
+
+  // ─── Fertilizer Advice ────────────────────────────────────────────────────────
+
+  app.post("/api/fertilizer-advice", aiLimiter, async (req, res) => {
+    try {
+      const { crop, farmSize, soilType, growthStage, waterSource, region } = req.body;
+      if (!crop) return res.status(400).json({ message: "crop is required" });
+      const advice = await getFertilizerAdvice(
+        crop,
+        parseFloat(farmSize) || 1,
+        soilType || "Loamy",
+        growthStage || "Vegetative",
+        waterSource || "Rain-fed",
+        region || "Maharashtra"
+      );
+      res.json(advice);
+    } catch (error) {
+      console.error("Error getting fertilizer advice:", error);
+      res.status(500).json({ message: "Failed to get fertilizer advice" });
+    }
+  });
+
+  // ─── Health ───────────────────────────────────────────────────────────────────
+
   app.get("/api/health", (_req, res) => {
     res.json({ status: "ok", service: "KrishiMitra API" });
   });

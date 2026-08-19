@@ -55,7 +55,7 @@ function Onboarding() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <User className="h-5 w-5 text-primary" />
-                Tell us about yourself
+                 Welcome, farmer
               </CardTitle>
               <p className="text-sm text-muted-foreground">Help us personalise your experience</p>
             </CardHeader>

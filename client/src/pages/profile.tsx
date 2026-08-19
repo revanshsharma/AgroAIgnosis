@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, User, MapPin, Calendar, Pencil, Check, X, Trash2, Sprout, Phone } from "lucide-react";
+import { ArrowLeft, User, MapPin, Calendar, Pencil, Check, X, Trash2, Sprout, Phone, Globe } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useUserProfile, INDIAN_REGIONS, PRIMARY_CROPS } from "@/hooks/use-user-profile";
+import { useLanguage } from "@/hooks/use-language";
+import { LANGUAGE_NAMES, Language } from "@/i18n/translations";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 
 function Profile() {
   const { profile, updateProfile, clearProfile } = useUserProfile();
+  const { t, language, setLanguage, languageName } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -41,9 +44,7 @@ function Profile() {
     setEditing(true);
   };
 
-  const cancelEdit = () => {
-    setEditing(false);
-  };
+  const cancelEdit = () => setEditing(false);
 
   const saveEdit = () => {
     if (!editName.trim() || !editRegion) return;
@@ -55,11 +56,12 @@ function Profile() {
       primaryCrop: editCrop,
     });
     setEditing(false);
-    toast({ title: "Profile updated", description: "Your information has been saved." });
+    toast({ title: t.profile.save, description: "Your information has been saved." });
   };
 
   const handleReset = () => {
     clearProfile();
+    localStorage.removeItem("krishimitra_auth_decided");
     setLocation("/");
   };
 
@@ -77,12 +79,12 @@ function Profile() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <h1 className="text-xl font-bold">My Profile</h1>
+            <h1 className="text-xl font-bold">{t.profile.title}</h1>
           </div>
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-6 space-y-5 max-w-lg">
+      <main className="container mx-auto px-4 py-6 space-y-5 max-w-lg pb-24">
         {/* Avatar + Name */}
         <Card>
           <CardContent className="pt-6">
@@ -115,14 +117,14 @@ function Profile() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <User className="h-4 w-4 text-primary" />
-              Personal Information
+              {t.profile.personal_info}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             {editing ? (
               <>
                 <div>
-                  <Label>Full Name *</Label>
+                  <Label>{t.profile.name} *</Label>
                   <Input
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
@@ -132,7 +134,7 @@ function Profile() {
                 </div>
 
                 <div>
-                  <Label>Phone Number</Label>
+                  <Label>{t.profile.phone}</Label>
                   <Input
                     value={editPhone}
                     onChange={(e) => setEditPhone(e.target.value)}
@@ -143,7 +145,7 @@ function Profile() {
                 </div>
 
                 <div>
-                  <Label>State / Region *</Label>
+                  <Label>{t.profile.region} *</Label>
                   <Select onValueChange={setEditRegion} value={editRegion}>
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="Select your state" />
@@ -157,7 +159,7 @@ function Profile() {
                 </div>
 
                 <div>
-                  <Label>Primary Crop</Label>
+                  <Label>{t.profile.primary_crop}</Label>
                   <Select onValueChange={setEditCrop} value={editCrop}>
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder="What do you mainly grow?" />
@@ -171,7 +173,7 @@ function Profile() {
                 </div>
 
                 <div>
-                  <Label>Farm Size</Label>
+                  <Label>{t.profile.farm_size}</Label>
                   <Input
                     value={editFarmSize}
                     onChange={(e) => setEditFarmSize(e.target.value)}
@@ -183,23 +185,54 @@ function Profile() {
                 <div className="flex gap-2 pt-2">
                   <Button variant="outline" onClick={cancelEdit} className="flex-1">
                     <X className="mr-2 h-4 w-4" />
-                    Cancel
+                    {t.profile.cancel}
                   </Button>
                   <Button onClick={saveEdit} disabled={!editName.trim() || !editRegion} className="flex-1">
                     <Check className="mr-2 h-4 w-4" />
-                    Save
+                    {t.profile.save}
                   </Button>
                 </div>
               </>
             ) : (
               <div className="space-y-3">
-                <InfoRow icon={<User className="h-4 w-4" />} label="Name" value={profile?.name} />
-                <InfoRow icon={<Phone className="h-4 w-4" />} label="Phone" value={profile?.phone || "Not provided"} />
-                <InfoRow icon={<MapPin className="h-4 w-4" />} label="Region" value={profile?.region} />
-                <InfoRow icon={<Sprout className="h-4 w-4" />} label="Primary Crop" value={profile?.primaryCrop || "Not specified"} />
-                <InfoRow icon={<MapPin className="h-4 w-4" />} label="Farm Size" value={profile?.farmSize || "Not specified"} />
+                <InfoRow icon={<User className="h-4 w-4" />} label={t.profile.name} value={profile?.name} />
+                <InfoRow icon={<Phone className="h-4 w-4" />} label={t.profile.phone} value={profile?.phone || "—"} />
+                <InfoRow icon={<MapPin className="h-4 w-4" />} label={t.profile.region} value={profile?.region} />
+                <InfoRow icon={<Sprout className="h-4 w-4" />} label={t.profile.primary_crop} value={profile?.primaryCrop || "—"} />
+                <InfoRow icon={<MapPin className="h-4 w-4" />} label={t.profile.farm_size} value={profile?.farmSize || "—"} />
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        {/* Language Selector */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Globe className="h-4 w-4 text-primary" />
+              {t.profile.language}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Select value={language} onValueChange={(v) => setLanguage(v as Language)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select language">
+                  {languageName}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.entries(LANGUAGE_NAMES) as [Language, string][]).map(([code, name]) => (
+                  <SelectItem key={code} value={code}>
+                    {name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground mt-2">
+              {language === 'hi' ? "भाषा बदलने से पूरा ऐप उस भाषा में बदल जाएगा।"
+                : language === 'mr' ? "भाषा बदलल्यास संपूर्ण ॲप त्या भाषेत बदलेल."
+                : "Changing the language will update the entire app interface."}
+            </p>
           </CardContent>
         </Card>
 
@@ -222,20 +255,20 @@ function Profile() {
           <AlertDialogTrigger asChild>
             <Button variant="outline" className="w-full text-destructive border-destructive/40">
               <Trash2 className="mr-2 h-4 w-4" />
-              Reset Profile
+              {t.profile.reset}
             </Button>
           </AlertDialogTrigger>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Reset your profile?</AlertDialogTitle>
+              <AlertDialogTitle>{t.profile.reset}</AlertDialogTitle>
               <AlertDialogDescription>
-                This will clear all your saved information and take you back to setup. Your analysis history will also be cleared.
+                {t.profile.reset_confirm}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogCancel>{t.profile.cancel}</AlertDialogCancel>
               <AlertDialogAction onClick={handleReset} className="bg-destructive text-destructive-foreground">
-                Reset
+                {t.profile.reset}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
