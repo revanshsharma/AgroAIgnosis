@@ -60,7 +60,7 @@ export default function FertilizerCalculator() {
   const [result, setResult] = useState<FertilizerAdvice | null>(null);
 
   const mutation = useMutation({
-    mutationFn: (data: object) => apiRequest("/api/fertilizer-advice", { method: "POST", body: JSON.stringify(data) }),
+    mutationFn: (data: object) => apiRequest("POST", "/api/fertilizer-advice", data),
     onSuccess: async (res) => {
       const data = await res.json();
       setResult(data);
