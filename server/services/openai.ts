@@ -1,8 +1,9 @@
+import "dotenv/config";
 import { GoogleGenAI } from "@google/genai";
 import { HfInference } from "@huggingface/inference";
 
 // Initialize AI clients with proper error handling  
-const geminiApiKey = process.env.GEMINI_API_KEY;
+const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 const huggingfaceApiKey = process.env.HUGGINGFACE_API_KEY;
 
 let genAI: any = null;
@@ -108,7 +109,7 @@ export async function analyzeCropImage(base64Image: string, mimeType: string = '
       ];
 
       const response = await genAI.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.6-flash",
         config: {
           systemInstruction: systemPrompt,
           responseMimeType: "application/json",
@@ -246,7 +247,7 @@ export async function analyzeSoilImage(base64Image: string, mimeType: string = '
       ];
 
       const response = await genAI.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.6-flash",
         config: {
           systemInstruction: systemPrompt,
           responseMimeType: "application/json",
@@ -310,7 +311,7 @@ export async function generateChatResponse(message: string, userRegion?: string,
       }`;
 
       const response = await genAI.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.6-flash",
         config: {
           systemInstruction: systemPrompt,
           responseMimeType: "application/json",
@@ -485,7 +486,7 @@ Use realistic 2024-2025 Indian market prices in INR per quintal (or kg for veget
 Prices should reflect current seasonal trends for ${region}.`;
 
       const response = await genAI.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.6-flash",
         config: { responseMimeType: "application/json" },
         contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
@@ -569,7 +570,7 @@ Return JSON with this exact structure:
 Use realistic Indian agrochemical products and doses. All numbers should be for ${farmSize} acres total.`;
 
       const response = await genAI.models.generateContent({
-        model: "gemini-2.5-flash",
+        model: "gemini-3.6-flash",
         config: { responseMimeType: "application/json" },
         contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
