@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Mic, MicOff, Square, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useLanguage } from "@/hooks/use-language";
 
 interface VoiceRecorderProps {
   onTranscript: (transcript: string) => void;
@@ -15,6 +16,21 @@ function VoiceRecorder({ onTranscript, isLoading = false }: VoiceRecorderProps) 
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef<any>(null);
   const { toast } = useToast();
+  const { language, t } = useLanguage();
+
+  const SPEECH_LOCALE: Record<string, string> = {
+    en: "en-IN",
+    hi: "hi-IN",
+    mr: "mr-IN",
+    ta: "ta-IN",
+    te: "te-IN",
+    kn: "kn-IN",
+    bn: "bn-IN",
+    gu: "gu-IN",
+    pa: "pa-IN",
+    ml: "ml-IN",
+    or: "or-IN",
+  };
 
   useEffect(() => {
     // Check if browser supports speech recognition
@@ -26,7 +42,7 @@ function VoiceRecorder({ onTranscript, isLoading = false }: VoiceRecorderProps) 
       
       recognition.continuous = false;
       recognition.interimResults = true;
-      recognition.lang = 'en-IN'; // Indian English
+      recognition.lang = SPEECH_LOCALE[language] || 'en-IN';
       
       recognition.onstart = () => {
         setIsRecording(true);
@@ -53,8 +69,8 @@ function VoiceRecorder({ onTranscript, isLoading = false }: VoiceRecorderProps) 
         console.error('Speech recognition error:', event.error);
         setIsRecording(false);
         toast({
-          title: "Voice Recognition Error",
-          description: "Please try again or check your microphone permissions.",
+          title: t.common.error,
+          description: t.common.retry,
           variant: "destructive",
         });
       };
@@ -66,8 +82,8 @@ function VoiceRecorder({ onTranscript, isLoading = false }: VoiceRecorderProps) 
       recognitionRef.current = recognition;
     } else {
       toast({
-        title: "Voice Not Supported",
-        description: "Your browser doesn't support voice recognition. Please use text input instead.",
+        title: t.common.error,
+        description: t.chat.placeholder,
         variant: "destructive",
       });
     }
@@ -77,7 +93,7 @@ function VoiceRecorder({ onTranscript, isLoading = false }: VoiceRecorderProps) 
         recognitionRef.current.stop();
       }
     };
-  }, [onTranscript, toast]);
+  }, [language, onTranscript, t.chat.placeholder, t.common.error, t.common.retry, toast]);
 
   const startRecording = () => {
     if (recognitionRef.current && !isRecording) {
@@ -86,8 +102,8 @@ function VoiceRecorder({ onTranscript, isLoading = false }: VoiceRecorderProps) 
       } catch (error) {
         console.error('Error starting recognition:', error);
         toast({
-          title: "Error",
-          description: "Failed to start voice recording. Please try again.",
+          title: t.common.error,
+          description: t.common.retry,
           variant: "destructive",
         });
       }
@@ -105,7 +121,7 @@ function VoiceRecorder({ onTranscript, isLoading = false }: VoiceRecorderProps) 
       <Card data-testid="voice-not-supported">
         <CardContent className="p-4 text-center">
           <p className="text-muted-foreground">
-            Voice input is not supported in your browser. Please use text input instead.
+            {t.chat.placeholder}
           </p>
         </CardContent>
       </Card>
@@ -120,11 +136,9 @@ function VoiceRecorder({ onTranscript, isLoading = false }: VoiceRecorderProps) 
           <CardContent className="p-4 text-center">
             <div className="flex items-center justify-center mb-2">
               <div className="w-4 h-4 bg-destructive rounded-full animate-pulse mr-2"></div>
-              <span className="font-medium text-primary">Recording...</span>
+              <span className="font-medium text-primary">{t.chat.listening}</span>
             </div>
-            <p className="text-sm text-muted-foreground mb-3">
-              Speak your question about crops, diseases, or farming techniques
-            </p>
+            <p className="text-sm text-muted-foreground mb-3">{t.chat.placeholder}</p>
             {transcript && (
               <div className="bg-background rounded-lg p-3 mb-3">
                 <p className="text-sm">{transcript}</p>
@@ -147,12 +161,12 @@ function VoiceRecorder({ onTranscript, isLoading = false }: VoiceRecorderProps) 
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                Processing...
+                {t.common.loading}
               </>
             ) : (
               <>
                 <Mic className="mr-2 h-5 w-5" />
-                Start Voice Message
+                {t.chat.send}
               </>
             )}
           </Button>
@@ -165,15 +179,14 @@ function VoiceRecorder({ onTranscript, isLoading = false }: VoiceRecorderProps) 
             data-testid="button-stop-recording"
           >
             <Square className="mr-2 h-4 w-4" />
-            Stop Recording
+            {t.common.cancel}
           </Button>
         )}
       </div>
 
       {/* Instructions */}
       <div className="text-center text-sm text-muted-foreground">
-        <p>Click the microphone button and speak your question clearly.</p>
-        <p>Ask about crop diseases, soil problems, fertilization, or any farming topic.</p>
+        <p>{t.chat.greeting}</p>
       </div>
     </div>
   );

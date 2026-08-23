@@ -56,13 +56,13 @@ function TrendIcon({ trend, change }: { trend: string; change: number }) {
 
 export default function MandiPage() {
   const { profile } = useUserProfile();
-  const { t } = useLanguage();
+  const { language } = useLanguage();
   const [selectedRegion, setSelectedRegion] = useState(profile?.region || "Maharashtra");
   const [category, setCategory] = useState("All Crops");
   const [refreshKey, setRefreshKey] = useState(0);
 
   const { data, isLoading, error } = useQuery<MandiData>({
-    queryKey: [`/api/mandi-prices?region=${encodeURIComponent(selectedRegion)}`, refreshKey],
+    queryKey: [`/api/mandi-prices?region=${encodeURIComponent(selectedRegion)}&language=${encodeURIComponent(language)}`, refreshKey],
     enabled: !!selectedRegion,
   });
 

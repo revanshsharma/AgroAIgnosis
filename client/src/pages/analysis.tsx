@@ -3,8 +3,11 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 import ImageUpload from "@/components/image-upload";
+import { useLanguage } from "@/hooks/use-language";
 
 function Analysis() {
+  const { t } = useLanguage();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -16,7 +19,7 @@ function Analysis() {
                 <ArrowLeft className="h-5 w-5" />
               </Button>
             </Link>
-            <h1 className="text-xl font-bold" data-testid="text-page-title">Image Analysis</h1>
+            <h1 className="text-xl font-bold" data-testid="text-page-title">{t.analysis.crop_analysis}</h1>
           </div>
         </div>
       </header>
@@ -24,11 +27,11 @@ function Analysis() {
       <main className="container mx-auto px-4 py-6">
         <Card data-testid="card-analysis-main">
           <CardHeader>
-            <CardTitle className="text-center">Analyze Your Crops or Soil</CardTitle>
+            <CardTitle className="text-center">{t.analysis.upload_image}</CardTitle>
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground text-center mb-6">
-              Upload a photo of your crops or soil sample to get instant AI-powered analysis and recommendations.
+              {t.analysis.upload_hint}
             </p>
             <ImageUpload />
           </CardContent>

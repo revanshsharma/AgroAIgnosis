@@ -289,7 +289,8 @@ export async function analyzeSoilImage(base64Image: string, mimeType: string = '
   return analyzeSoilVisually();
 }
 
-export async function generateChatResponse(message: string, userRegion?: string, userName?: string, primaryCrop?: string): Promise<ChatResponse> {
+export async function generateChatResponse(message: string, userRegion?: string, userName?: string, primaryCrop?: string, languageCode: string = 'en'): Promise<ChatResponse> {
+  const responseLanguage = resolveAnalysisLanguage(languageCode);
   // Try Gemini first if available
   if (genAI) {
     try {
@@ -308,7 +309,9 @@ export async function generateChatResponse(message: string, userRegion?: string,
         "response": "helpful, practical response in simple language",
         "relatedTopics": ["topic1", "topic2", "topic3"],
         "actionable": true/false
-      }`;
+      }
+
+      Important: Write all user-facing values in ${responseLanguage}. Keep only JSON keys in English.`;
 
       const response = await genAI.models.generateContent({
         model: "gemini-3.6-flash",
@@ -336,7 +339,7 @@ export async function generateChatResponse(message: string, userRegion?: string,
       if (result.response) {
         return {
           response: result.response,
-          relatedTopics: result.relatedTopics || generateRelatedTopics(message),
+          relatedTopics: result.relatedTopics || generateRelatedTopics(message, languageCode),
           actionable: result.actionable !== undefined ? result.actionable : true
         } as ChatResponse;
       } else {
@@ -351,8 +354,8 @@ export async function generateChatResponse(message: string, userRegion?: string,
   // Fallback response if Gemini fails or is unavailable
   console.log("Using fallback chat response...");
   return {
-    response: generateFallbackResponse(message, userRegion),
-    relatedTopics: generateRelatedTopics(message),
+    response: generateFallbackResponse(message, userRegion, languageCode),
+    relatedTopics: generateRelatedTopics(message, languageCode),
     actionable: true
   };
 }
@@ -457,7 +460,8 @@ export interface MandiData {
   prices: MandiPrice[];
 }
 
-export async function getMandiPrices(region: string): Promise<MandiData> {
+export async function getMandiPrices(region: string, languageCode: string = 'en'): Promise<MandiData> {
+  const responseLanguage = resolveAnalysisLanguage(languageCode);
   const today = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
 
   if (genAI) {
@@ -483,7 +487,9 @@ Return a JSON object with this exact structure:
 
 Include 16 crops commonly grown in ${region}: mix of cereals, pulses, vegetables, oilseeds, fruits, and spices.
 Use realistic 2024-2025 Indian market prices in INR per quintal (or kg for vegetables/fruits).
-Prices should reflect current seasonal trends for ${region}.`;
+Prices should reflect current seasonal trends for ${region}.
+
+Important: Write all user-facing values (region/date/crop/market/unit) in ${responseLanguage}. Keep trend exactly as up|down|stable in English.`;
 
       const response = await genAI.models.generateContent({
         model: "gemini-3.6-flash",
@@ -534,8 +540,9 @@ export interface FertilizerAdvice {
 
 export async function getFertilizerAdvice(
   crop: string, farmSize: number, soilType: string,
-  growthStage: string, waterSource: string, region: string
+  growthStage: string, waterSource: string, region: string, languageCode: string = 'en'
 ): Promise<FertilizerAdvice> {
+  const responseLanguage = resolveAnalysisLanguage(languageCode);
   if (genAI) {
     try {
       const prompt = `You are an expert agronomist for Indian farming. Provide fertilizer and pest management advice for:
@@ -567,7 +574,8 @@ Return JSON with this exact structure:
   "cautions": ["caution1", "caution2", "caution3"]
 }
 
-Use realistic Indian agrochemical products and doses. All numbers should be for ${farmSize} acres total.`;
+Use realistic Indian agrochemical products and doses. All numbers should be for ${farmSize} acres total.
+Important: Write all user-facing values in ${responseLanguage}. Keep only JSON keys in English.`;
 
       const response = await genAI.models.generateContent({
         model: "gemini-3.6-flash",
@@ -618,7 +626,7 @@ Use realistic Indian agrochemical products and doses. All numbers should be for 
 }
 
 // Helper functions for chat
-function generateRelatedTopics(message: string): string[] {
+function generateRelatedTopics(message: string, languageCode: string = 'en'): string[] {
   const messageLower = message.toLowerCase();
   const topics = [];
   
@@ -643,7 +651,7 @@ function generateRelatedTopics(message: string): string[] {
   return topics.slice(0, 3); // Limit to 3 topics
 }
 
-function generateFallbackResponse(message: string, userRegion?: string): string {
+function generateFallbackResponse(message: string, userRegion?: string, languageCode: string = 'en'): string {
   const messageLower = message.toLowerCase();
   const regionText = userRegion ? ` for ${userRegion} region` : '';
   

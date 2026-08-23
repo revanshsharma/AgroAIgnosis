@@ -50,8 +50,43 @@ function WeatherIcon({ icon, className }: { icon: string; className?: string }) 
 
 function Home() {
   const { profile } = useUserProfile();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { isDark, toggleTheme } = useTheme();
+
+  const isHindi = language === "hi";
+  const homeUi = isHindi ? {
+    govSupport: "सरकारी सहायता",
+    kisanSuvidhaTitle: "किसान सुविधा पोर्टल",
+    kisanSuvidhaDesc: "मौसम, मंडी भाव, फसल सुरक्षा और कृषि जानकारी के लिए सरकारी पोर्टल।",
+    kisanHelpline: "किसान हेल्पलाइन",
+    kisanHelplineDesc: "किसानों के लिए मुफ्त सहायता: फसल सलाह, मिट्टी परीक्षण, सब्सिडी और योजनाएं।",
+    tollFree: "टोल-फ्री · 24×7",
+    farmerTools: "किसान टूल्स",
+    mandiPrices: "मंडी भाव",
+    liveMarketRates: "लाइव बाजार दर",
+    cropCalendar: "फसल कैलेंडर",
+    sowingHarvest: "बुवाई और कटाई",
+    fertilizerCalc: "खाद कैलकुलेटर",
+    npkRecommendations: "NPK सुझाव",
+    analysisHistory: "विश्लेषण इतिहास",
+    pastScans: "पुराने स्कैन और चार्ट",
+  } : {
+    govSupport: "Government Support",
+    kisanSuvidhaTitle: "Kisan Suvidha Portal",
+    kisanSuvidhaDesc: "Official government portal for weather, market prices, plant protection, agri-inputs and more.",
+    kisanHelpline: "Kisan Helpline",
+    kisanHelplineDesc: "Free helpline for farmers — crop advice, soil testing, subsidies and government schemes.",
+    tollFree: "Toll-free · 24×7",
+    farmerTools: "Farmer Tools",
+    mandiPrices: "Mandi Prices",
+    liveMarketRates: "Live market rates",
+    cropCalendar: "Crop Calendar",
+    sowingHarvest: "Sowing & harvest",
+    fertilizerCalc: "Fertilizer Calc",
+    npkRecommendations: "NPK recommendations",
+    analysisHistory: "Analysis History",
+    pastScans: "Past scans & charts",
+  };
 
   const { data: recentResults, isLoading } = useQuery<AnalysisResult[]>({
     queryKey: ["/api/analysis-results", "user-1"],
@@ -441,7 +476,7 @@ function Home() {
           <CardContent className="p-6">
             <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
               <ShieldCheck className="text-primary h-5 w-5" />
-              Government Support
+              {homeUi.govSupport}
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -458,9 +493,9 @@ function Home() {
                       <ExternalLink className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold text-sm">Kisan Suvidha Portal</p>
+                      <p className="font-semibold text-sm">{homeUi.kisanSuvidhaTitle}</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Official government portal for weather, market prices, plant protection, agri-inputs and more.
+                        {homeUi.kisanSuvidhaDesc}
                       </p>
                       <p className="text-xs text-primary font-medium mt-2 flex items-center gap-1">
                         kisansuvidha.gov.in
@@ -479,12 +514,12 @@ function Home() {
                       <Phone className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold text-sm">Kisan Helpline</p>
+                      <p className="font-semibold text-sm">{homeUi.kisanHelpline}</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Free helpline for farmers — crop advice, soil testing, subsidies and government schemes.
+                        {homeUi.kisanHelplineDesc}
                       </p>
                       <p className="text-lg font-bold text-secondary mt-2">1800-180-1551</p>
-                      <p className="text-xs text-muted-foreground">Toll-free · 24×7</p>
+                      <p className="text-xs text-muted-foreground">{homeUi.tollFree}</p>
                     </div>
                   </div>
                 </div>
@@ -496,34 +531,34 @@ function Home() {
         {/* Farmer Tools */}
         <Card className="mb-8">
           <CardContent className="p-6">
-            <h3 className="text-xl font-semibold mb-4">Farmer Tools</h3>
+            <h3 className="text-xl font-semibold mb-4">{homeUi.farmerTools}</h3>
             <div className="grid grid-cols-2 gap-3">
               <Link href="/mandi" className="w-full">
                 <Button variant="outline" className="flex flex-col items-center p-4 h-auto hover-elevate w-full gap-1">
                   <Store className="h-6 w-6 text-accent" />
-                  <span className="text-sm font-medium">Mandi Prices</span>
-                  <span className="text-xs text-muted-foreground">Live market rates</span>
+                  <span className="text-sm font-medium">{homeUi.mandiPrices}</span>
+                  <span className="text-xs text-muted-foreground">{homeUi.liveMarketRates}</span>
                 </Button>
               </Link>
               <Link href="/calendar" className="w-full">
                 <Button variant="outline" className="flex flex-col items-center p-4 h-auto hover-elevate w-full gap-1">
                   <CalendarIcon className="h-6 w-6 text-primary" />
-                  <span className="text-sm font-medium">Crop Calendar</span>
-                  <span className="text-xs text-muted-foreground">Sowing & harvest</span>
+                  <span className="text-sm font-medium">{homeUi.cropCalendar}</span>
+                  <span className="text-xs text-muted-foreground">{homeUi.sowingHarvest}</span>
                 </Button>
               </Link>
               <Link href="/calculator" className="w-full">
                 <Button variant="outline" className="flex flex-col items-center p-4 h-auto hover-elevate w-full gap-1">
                   <FlaskConical className="h-6 w-6 text-secondary" />
-                  <span className="text-sm font-medium">Fertilizer Calc</span>
-                  <span className="text-xs text-muted-foreground">NPK recommendations</span>
+                  <span className="text-sm font-medium">{homeUi.fertilizerCalc}</span>
+                  <span className="text-xs text-muted-foreground">{homeUi.npkRecommendations}</span>
                 </Button>
               </Link>
               <Link href="/history" className="w-full">
                 <Button variant="outline" className="flex flex-col items-center p-4 h-auto hover-elevate w-full gap-1">
                   <ClipboardList className="h-6 w-6 text-muted-foreground" />
-                  <span className="text-sm font-medium">Analysis History</span>
-                  <span className="text-xs text-muted-foreground">Past scans & charts</span>
+                  <span className="text-sm font-medium">{homeUi.analysisHistory}</span>
+                  <span className="text-xs text-muted-foreground">{homeUi.pastScans}</span>
                 </Button>
               </Link>
             </div>

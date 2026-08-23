@@ -11,6 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import VoiceRecorder from "@/components/voice-recorder";
 import type { ChatMessage } from "@shared/schema";
 import { useUserProfile } from "@/hooks/use-user-profile";
+import { useLanguage } from "@/hooks/use-language";
 
 interface ChatResponse extends ChatMessage {
   relatedTopics?: string[];
@@ -25,6 +26,7 @@ function Chat() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { profile } = useUserProfile();
+  const { t, language } = useLanguage();
 
   const userId = "user-1";
 
@@ -47,6 +49,7 @@ function Chat() {
         message: data.message,
         userId,
         isVoice: data.isVoice || false,
+        language,
         userRegion: profile?.region || "India",
         userName: profile?.name,
         primaryCrop: profile?.primaryCrop,
@@ -59,7 +62,7 @@ function Chat() {
     },
     onError: (error) => {
       toast({
-        title: "Error",
+        title: t.common.error,
         description: `Failed to send message: ${error.message}`,
         variant: "destructive",
       });
@@ -112,10 +115,10 @@ function Chat() {
         <Card className="h-full flex flex-col" data-testid="card-chat">
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Chat with KrishiMitra</span>
+              <span>{t.chat.title}</span>
               {isVoiceMode && (
                 <Badge variant="secondary" data-testid="badge-voice-mode">
-                  Voice Mode
+                  {t.chat.listening}
                 </Badge>
               )}
             </CardTitle>
@@ -125,12 +128,11 @@ function Chat() {
             <div className="flex-1 overflow-y-auto mb-4 space-y-4" data-testid="messages-container">
               {isLoading ? (
                 <div className="text-center text-muted-foreground py-8">
-                  Loading chat history...
+                  {t.common.loading}
                 </div>
               ) : !chatHistory || chatHistory.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8" data-testid="text-no-messages">
-                  <p className="mb-2">Welcome to KrishiMitra! 🌱</p>
-                  <p>Ask me anything about farming, crop diseases, soil care, or agricultural practices.</p>
+                  <p className="mb-2">{t.chat.greeting}</p>
                 </div>
               ) : (
                 <>
@@ -179,7 +181,7 @@ function Chat() {
                   <Input
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Ask about crops, diseases, farming techniques..."
+                    placeholder={t.chat.placeholder}
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage(message)}
                     disabled={sendMessageMutation.isPending}
                     className="flex-1"

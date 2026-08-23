@@ -237,13 +237,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/chat", aiLimiter, async (req, res) => {
     try {
-      const { message, userId, isVoice, userRegion, userName, primaryCrop } = req.body;
+      const { message, userId, isVoice, userRegion, userName, primaryCrop, language } = req.body;
       
       if (!message || !userId) {
         return res.status(400).json({ message: "Missing required fields: message, userId" });
       }
 
-      const chatResponse = await generateChatResponse(message, userRegion, userName, primaryCrop);
+      const chatResponse = await generateChatResponse(message, userRegion, userName, primaryCrop, language);
       
       const chatData = {
         userId,
@@ -302,7 +302,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/mandi-prices", async (req, res) => {
     try {
       const region = (req.query.region as string) || "Maharashtra";
-      const data = await getMandiPrices(region);
+      const language = (req.query.language as string) || "en";
+      const data = await getMandiPrices(region, language);
       res.json(data);
     } catch (error) {
       console.error("Error fetching mandi prices:", error);
@@ -314,7 +315,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/fertilizer-advice", aiLimiter, async (req, res) => {
     try {
-      const { crop, farmSize, soilType, growthStage, waterSource, region } = req.body;
+      const { crop, farmSize, soilType, growthStage, waterSource, region, language } = req.body;
       if (!crop) return res.status(400).json({ message: "crop is required" });
       const advice = await getFertilizerAdvice(
         crop,
@@ -322,7 +323,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         soilType || "Loamy",
         growthStage || "Vegetative",
         waterSource || "Rain-fed",
-        region || "Maharashtra"
+        region || "Maharashtra",
+        language || "en"
       );
       res.json(advice);
     } catch (error) {

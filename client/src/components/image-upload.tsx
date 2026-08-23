@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -6,6 +6,7 @@ import { Upload, Camera, X, Loader2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import AnalysisResult from "./analysis-result";
+import { useLanguage } from "@/hooks/use-language";
 
 // Mock user data
 const mockUser = {
@@ -23,27 +24,20 @@ interface AnalysisResponse {
   metadata?: any;
 }
 
-const ANALYSIS_LANGUAGES = [
-  { value: "en", label: "English" },
-  { value: "hi", label: "Hindi" },
-  { value: "mr", label: "Marathi" },
-  { value: "ta", label: "Tamil" },
-  { value: "te", label: "Telugu" },
-  { value: "kn", label: "Kannada" },
-  { value: "bn", label: "Bengali" },
-  { value: "gu", label: "Gujarati" },
-  { value: "pa", label: "Punjabi" },
-] as const;
-
 function ImageUpload() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [analysisType, setAnalysisType] = useState<'crop' | 'soil'>('crop');
-  const [analysisLanguage, setAnalysisLanguage] = useState<string>('en');
+  const { t, language, languageName } = useLanguage();
+  const [analysisLanguage, setAnalysisLanguage] = useState<string>(language);
   const [analysisResult, setAnalysisResult] = useState<AnalysisResponse | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  useEffect(() => {
+    setAnalysisLanguage(language);
+  }, [language]);
 
   const analyzeImageMutation = useMutation({
     mutationFn: async (data: { file: File; analysisType: string; language: string }) => {
@@ -69,13 +63,13 @@ function ImageUpload() {
       setAnalysisResult(data);
       queryClient.invalidateQueries({ queryKey: ["/api/analysis-results", mockUser.id] });
       toast({
-        title: "Analysis Complete",
-        description: "Your image has been successfully analyzed!",
+        title: t.analysis.analysis_complete,
+        description: t.analysis.recommendations,
       });
     },
     onError: (error) => {
       toast({
-        title: "Analysis Failed",
+        title: t.common.error,
         description: `Failed to analyze image: ${error.message}`,
         variant: "destructive",
       });
@@ -123,8 +117,8 @@ function ImageUpload() {
   const openCamera = () => {
     // In a real app, this would open the device camera
     toast({
-      title: "Camera Feature",
-      description: "Camera functionality would be implemented here using the device's camera API.",
+      title: t.analysis.take_photo,
+      description: t.analysis.select_gallery,
     });
   };
 
@@ -141,30 +135,22 @@ function ImageUpload() {
           onClick={() => setAnalysisType('crop')}
           data-testid="button-crop-analysis"
         >
-          Crop Analysis
+          {t.analysis.crop_analysis}
         </Button>
         <Button
           variant={analysisType === 'soil' ? 'default' : 'outline'}
           onClick={() => setAnalysisType('soil')}
           data-testid="button-soil-analysis"
         >
-          Soil Analysis
+          {t.analysis.soil_analysis}
         </Button>
       </div>
 
       <div className="space-y-2 max-w-xs mx-auto" data-testid="analysis-language-selection">
-        <label className="text-sm font-medium" htmlFor="analysis-language">Report Language</label>
-        <select
-          id="analysis-language"
-          value={analysisLanguage}
-          onChange={(event) => setAnalysisLanguage(event.target.value)}
-          className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-          data-testid="select-analysis-language"
-        >
-          {ANALYSIS_LANGUAGES.map((language) => (
-            <option key={language.value} value={language.value}>{language.label}</option>
-          ))}
-        </select>
+        <label className="text-sm font-medium" htmlFor="analysis-language">{t.profile.language}</label>
+        <div id="analysis-language" className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm flex items-center">
+          {languageName}
+        </div>
       </div>
 
       {/* Upload Area */}
@@ -180,13 +166,13 @@ function ImageUpload() {
             >
               <Upload className="text-4xl text-muted-foreground mb-3 mx-auto" />
               <p className="font-medium mb-1">
-                Upload {analysisType === 'crop' ? 'Crop' : 'Soil'} Image
+                {t.analysis.upload_image}
               </p>
               <p className="text-sm text-muted-foreground mb-4">
-                Drag & drop or click to select
+                {t.analysis.upload_hint}
               </p>
               <Badge variant="secondary" className="mb-4">
-                {analysisType === 'crop' ? 'Crop Disease Detection' : 'Soil Quality Analysis'}
+                {analysisType === 'crop' ? t.analysis.crop_analysis : t.analysis.soil_analysis}
               </Badge>
             </div>
           ) : (
@@ -226,11 +212,11 @@ function ImageUpload() {
                   {analyzeImageMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Analyzing...
+                      {t.analysis.analyzing}
                     </>
                   ) : (
                     <>
-                      Analyze {analysisType === 'crop' ? 'Crop' : 'Soil'}
+                      {analysisType === 'crop' ? t.analysis.analyze_crop : t.analysis.analyze_soil}
                     </>
                   )}
                 </Button>
@@ -258,7 +244,7 @@ function ImageUpload() {
           data-testid="button-open-camera"
         >
           <Camera className="mr-2 h-4 w-4" />
-          Open Camera
+          {t.analysis.take_photo}
         </Button>
         <Button
           variant="outline"
@@ -267,7 +253,7 @@ function ImageUpload() {
           data-testid="button-select-from-gallery"
         >
           <Upload className="mr-2 h-4 w-4" />
-          Select from Gallery
+          {t.analysis.select_gallery}
         </Button>
       </div>
     </div>
