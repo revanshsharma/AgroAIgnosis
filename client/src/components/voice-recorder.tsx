@@ -30,6 +30,10 @@ function VoiceRecorder({ onTranscript, isLoading = false }: VoiceRecorderProps) 
     pa: "pa-IN",
     ml: "ml-IN",
     or: "or-IN",
+    as: "as-IN",
+    ur: "ur-IN",
+    kok: "kok-IN",
+    ks: "ks-IN",
   };
 
   useEffect(() => {

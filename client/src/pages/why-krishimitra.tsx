@@ -104,7 +104,7 @@ function WhyKrishiMitra() {
                 <p className="text-sm font-semibold text-primary-foreground/80 mb-2">KrishiMitra</p>
                 <h3 className="text-xl font-semibold mb-3">Focused, local and actionable</h3>
                 <ul className="space-y-2 text-sm text-primary-foreground/90">
-                  <li>• Voice and 11 Indian language options</li>
+                  <li>• Voice support for 14 Indian languages</li>
                   <li>• Crop photo + region + weather context</li>
                   <li>• One path to advice, prices, schemes and help</li>
                 </ul>

@@ -21,7 +21,7 @@ const INDIAN_STATES = [
   "Uttarakhand", "West Bengal", "Delhi", "Jammu & Kashmir",
 ];
 
-const LANGUAGE_OPTIONS: Language[] = ["en", "hi", "mr", "pa", "gu", "ta", "te", "kn", "bn", "ml", "or"];
+const LANGUAGE_OPTIONS: Language[] = ["en", "hi", "mr", "pa", "gu", "ta", "te", "kn", "bn", "ml", "or", "as", "ur", "kok", "ks"];
 
 interface AuthPageProps {
   onSuccess: (profile: Pick<UserProfile, "name" | "region" | "phone">) => void;

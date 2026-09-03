@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, MicOff, Navigation, Volume2 } from "lucide-react";
+import { LoaderCircle, MessageCircle, Mic, MicOff, Navigation, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/hooks/use-language";
+import { useUserProfile } from "@/hooks/use-user-profile";
 import { useLocation } from "wouter";
 
 const SPEECH_LANGUAGES: Record<string, string> = {
@@ -18,16 +19,82 @@ const SPEECH_LANGUAGES: Record<string, string> = {
   bn: "bn-IN",
   ml: "ml-IN",
   or: "or-IN",
+  as: "as-IN",
+  ur: "ur-IN",
+  kok: "kok-IN",
+  ks: "ks-IN",
 };
 
 function VoiceNavigation() {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
+  const { profile } = useUserProfile();
   const { toast } = useToast();
   const [, navigate] = useLocation();
   const recognitionRef = useRef<any>(null);
   const [isSupported, setIsSupported] = useState(false);
   const [isListening, setIsListening] = useState(false);
+  const [isResponding, setIsResponding] = useState(false);
   const [heardText, setHeardText] = useState("");
+  const [assistantReply, setAssistantReply] = useState("");
+  const voicesRef = useRef<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    if (!("speechSynthesis" in window)) return;
+    const loadVoices = () => {
+      voicesRef.current = window.speechSynthesis.getVoices();
+    };
+    loadVoices();
+    window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
+    return () => window.speechSynthesis.removeEventListener("voiceschanged", loadVoices);
+  }, []);
+
+  const speak = (message: string) => {
+    if (!("speechSynthesis" in window) || !message) return;
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(message.slice(0, 900));
+    const locale = SPEECH_LANGUAGES[language] || "en-IN";
+    utterance.lang = locale;
+    const voices = voicesRef.current.length > 0
+      ? voicesRef.current
+      : window.speechSynthesis.getVoices();
+    const normalizedLocale = locale.toLowerCase();
+    const normalizedLanguage = language.toLowerCase();
+    const matchingVoice = voices.find((voice) => voice.lang.toLowerCase() === normalizedLocale)
+      || voices.find((voice) => voice.lang.toLowerCase().startsWith(`${normalizedLanguage}-`));
+    if (matchingVoice) utterance.voice = matchingVoice;
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+    window.speechSynthesis.speak(utterance);
+  };
+
+  const askKrishiMitra = async (message: string) => {
+    setIsResponding(true);
+    setAssistantReply("");
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message,
+          userId: "user-1",
+          isVoice: true,
+          language,
+          userRegion: profile?.region || "India",
+          userName: profile?.name,
+          primaryCrop: profile?.primaryCrop,
+        }),
+      });
+      if (!response.ok) throw new Error("Unable to get a response");
+      const result = await response.json();
+      const reply = result.response || t.common.error;
+      setAssistantReply(reply);
+      speak(reply);
+    } catch {
+      toast({ title: t.common.error, description: "KrishiMitra could not answer right now. Please try again.", variant: "destructive" });
+    } finally {
+      setIsResponding(false);
+    }
+  };
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -72,10 +139,7 @@ function VoiceNavigation() {
           navigate(destination.path);
           toast({ title: "Opening KrishiMitra", description: `Going to ${destination.path === "/" ? "home" : destination.path.slice(1)}.` });
         } else {
-          toast({
-            title: "I heard you",
-            description: "Try saying: scan crop, mandi prices, government schemes, or help.",
-          });
+          void askKrishiMitra(transcript);
         }
         setIsListening(false);
       }
@@ -91,7 +155,7 @@ function VoiceNavigation() {
       recognition.stop();
       recognitionRef.current = null;
     };
-  }, [language, navigate, toast]);
+  }, [language, navigate, toast, profile, t]);
 
   const toggleListening = () => {
     if (!recognitionRef.current) {
@@ -102,6 +166,7 @@ function VoiceNavigation() {
       recognitionRef.current.stop();
       return;
     }
+    window.speechSynthesis?.cancel();
     try {
       recognitionRef.current.start();
     } catch {
@@ -113,17 +178,33 @@ function VoiceNavigation() {
 
   return (
     <div className="fixed bottom-20 right-4 z-50 flex flex-col items-end gap-2">
-      {isListening && (
+      {(isListening || isResponding || assistantReply) && (
         <Card className="w-64 border-primary/30 shadow-lg" data-testid="voice-navigation-status">
           <CardContent className="p-3">
-            <div className="flex items-center gap-2 text-primary font-semibold text-sm">
-              <Volume2 className="h-4 w-4 animate-pulse" />
-              Listening for a command…
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Say “scan my crop”, “mandi prices”, or “government schemes”.
-            </p>
+            {isListening && <>
+              <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+                <Volume2 className="h-4 w-4 animate-pulse" />
+                {t.chat.listening}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Ask a farm question, or say “scan crop”, “mandi prices”, or “government schemes”.
+              </p>
+            </>}
+            {isResponding && <div className="flex items-center gap-2 text-primary font-semibold text-sm">
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+              KrishiMitra is preparing your answer…
+            </div>}
             {heardText && <p className="text-sm mt-2 bg-muted rounded p-2">{heardText}</p>}
+            {assistantReply && !isResponding && <>
+              <div className="flex items-center gap-2 mt-2 text-primary font-semibold text-sm">
+                <MessageCircle className="h-4 w-4" />
+                KrishiMitra
+              </div>
+              <p className="text-sm mt-1 leading-relaxed max-h-40 overflow-y-auto">{assistantReply}</p>
+              <Button variant="ghost" size="sm" className="mt-1 px-2 h-7 text-xs" onClick={() => speak(assistantReply)}>
+                <Volume2 className="h-3.5 w-3.5 mr-1" /> Read aloud
+              </Button>
+            </>}
           </CardContent>
         </Card>
       )}
@@ -131,11 +212,11 @@ function VoiceNavigation() {
         onClick={toggleListening}
         size="lg"
         className="rounded-full shadow-lg gap-2 px-4"
-        aria-label={isListening ? "Stop voice navigation" : "Speak to navigate KrishiMitra"}
+        aria-label={isListening ? "Stop listening" : "Talk to KrishiMitra"}
         data-testid="button-voice-navigation"
       >
         {isListening ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-        <span className="hidden sm:inline">{isListening ? "Stop listening" : "Speak to navigate"}</span>
+        <span className="hidden sm:inline">{isListening ? "Stop listening" : "Talk to KrishiMitra"}</span>
         {!isListening && <Navigation className="h-4 w-4" />}
       </Button>
     </div>

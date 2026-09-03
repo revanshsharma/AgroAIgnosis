@@ -134,6 +134,9 @@ function AppShell() {
               <Route path="/profile" component={Profile} />
               <Route component={NotFound} />
             </Switch>
+            <footer className="px-4 py-5 text-center text-xs text-muted-foreground" aria-label="Copyright">
+              © 2025 ZeroTheory™. All rights reserved.
+            </footer>
             {hasProfile && authDecided && <BottomNavigation />}
           </div>
         </UserProfileContext.Provider>

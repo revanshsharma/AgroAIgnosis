@@ -1,4 +1,4 @@
-export type Language = 'en' | 'hi' | 'mr' | 'pa' | 'gu' | 'ta' | 'te' | 'kn' | 'bn' | 'ml' | 'or';
+export type Language = 'en' | 'hi' | 'mr' | 'pa' | 'gu' | 'ta' | 'te' | 'kn' | 'bn' | 'ml' | 'or' | 'as' | 'ur' | 'kok' | 'ks';
 
 export const LANGUAGE_NAMES: Record<Language, string> = {
   en: 'English',
@@ -12,6 +12,10 @@ export const LANGUAGE_NAMES: Record<Language, string> = {
   bn: 'বাংলা',
   ml: 'മലയാളം',
   or: 'ଓଡ଼ିଆ',
+  as: 'অসমীয়া',
+  ur: 'اردو',
+  kok: 'कोंकणी',
+  ks: 'کٲشُر',
 };
 
 export const REGION_LANGUAGE_MAP: Record<string, Language> = {
@@ -35,9 +39,9 @@ export const REGION_LANGUAGE_MAP: Record<string, Language> = {
   'Kerala': 'ml',
   'West Bengal': 'bn',
   'Odisha': 'or',
-  'Assam': 'hi',
-  'Goa': 'mr',
-  'Jammu & Kashmir': 'hi',
+  'Assam': 'as',
+  'Goa': 'kok',
+  'Jammu & Kashmir': 'ks',
   'Manipur': 'hi',
   'Meghalaya': 'hi',
   'Mizoram': 'hi',
@@ -667,6 +671,44 @@ const or: Translations = {
   common: { loading: 'ଲୋଡ ହେଉଛି...', error: 'କିଛି ଭୁଲ ହୋଇଗଲା। ଦୟାକରି ପୁଣି ଚେଷ୍ଟା କରନ୍ତୁ।', back: 'ପଛକୁ', next: 'ଆଗକୁ', save: 'ସଞ୍ଚୟ', cancel: 'ବାତିଲ', submit: 'ଦାଖଲ', retry: 'ପୁଣି ଚେଷ୍ଟା', offline_message: 'ଆପଣ ଅଫଲାଇନ ଅଛନ୍ତି। କିଛି ସୁବିଧା କାମ ନ କରିପାରେ।', offline_title: 'ଇଣ୍ଟରନେଟ ନାହିଁ', app_name: 'KrishiMitra' },
 };
 
+// These additions retain English as a graceful fallback for less-common UI copy,
+// while ensuring the selected language is used for AI responses and voice input.
+const as: Translations = {
+  ...en,
+  nav: { ...en.nav, home: 'হোম', scan: 'স্কেন', chat: 'চেট', history: 'ইতিহাস', profile: 'প্ৰফাইল', schemes: 'আঁচনি', support: 'সহায়' },
+  home: { ...en.home, greeting_morning: 'সুপ্ৰভাত', greeting_afternoon: 'নমস্কাৰ', greeting_evening: 'শুভ সন্ধিয়া', subtitle: 'আজি আপোনাৰ শস্যৰ যত্ন ল’বলৈ সাজু নে?', crop_analysis: 'শস্য বিশ্লেষণ', ask_krishimitra: 'KrishiMitraক সোধক', gov_schemes: 'চৰকাৰী আঁচনি', farmer_support: 'কৃষক সহায়', weather: 'সজীৱ বতৰ' },
+  chat: { ...en.chat, title: 'KrishiMitra চেট', placeholder: 'শস্য, মাটি বা বতৰৰ বিষয়ে সোধক...', send: 'পঠাওক', listening: 'শুনিছে...' },
+  profile: { ...en.profile, title: 'মোৰ প্ৰফাইল', language: 'ভাষা', region: 'ৰাজ্য / অঞ্চল', save: 'সংৰক্ষণ কৰক', cancel: 'বাতিল কৰক' },
+  common: { ...en.common, loading: 'লোড হৈ আছে...', error: 'কিবা ভুল হ’ল। অনুগ্ৰহ কৰি পুনৰ চেষ্টা কৰক।', back: 'পিছলৈ', next: 'আগলৈ', save: 'সংৰক্ষণ কৰক', cancel: 'বাতিল কৰক', retry: 'পুনৰ চেষ্টা কৰক' },
+};
+
+const ur: Translations = {
+  ...en,
+  nav: { ...en.nav, home: 'ہوم', scan: 'اسکین', chat: 'چیٹ', history: 'تاریخ', profile: 'پروفائل', schemes: 'اسکیمیں', support: 'مدد' },
+  home: { ...en.home, greeting_morning: 'صبح بخیر', greeting_afternoon: 'آداب', greeting_evening: 'شام بخیر', subtitle: 'کیا آپ آج اپنی فصلوں کی دیکھ بھال کے لیے تیار ہیں؟', crop_analysis: 'فصل کا تجزیہ', ask_krishimitra: 'KrishiMitra سے پوچھیں', gov_schemes: 'سرکاری اسکیمیں', farmer_support: 'کسان مدد', weather: 'موسم' },
+  chat: { ...en.chat, title: 'KrishiMitra چیٹ', placeholder: 'فصل، مٹی یا موسم کے بارے میں پوچھیں...', send: 'بھیجیں', listening: 'سن رہے ہیں...' },
+  profile: { ...en.profile, title: 'میرا پروفائل', language: 'زبان', region: 'ریاست / علاقہ', save: 'محفوظ کریں', cancel: 'منسوخ کریں' },
+  common: { ...en.common, loading: 'لوڈ ہو رہا ہے...', error: 'کچھ غلط ہو گیا۔ دوبارہ کوشش کریں۔', back: 'واپس', next: 'آگے', save: 'محفوظ کریں', cancel: 'منسوخ کریں', retry: 'دوبارہ کوشش کریں' },
+};
+
+const kok: Translations = {
+  ...en,
+  nav: { ...en.nav, home: 'मुखेल', scan: 'स्कॅन', chat: 'गप्पा', history: 'इतिहास', profile: 'प्रोफाइल', schemes: 'योजना', support: 'आदार' },
+  home: { ...en.home, greeting_morning: 'सुप्रभात', greeting_afternoon: 'नमस्कार', greeting_evening: 'शुभ सांज', subtitle: 'आयज तुमच्या पिकांचो सांबाळ घेवपाक तयार आसा?', crop_analysis: 'पिक विश्लेषण', ask_krishimitra: 'KrishiMitra कडेन विचारात', gov_schemes: 'सरकारी योजना', farmer_support: 'शेतकार आदार', weather: 'थेट हवामान' },
+  chat: { ...en.chat, title: 'KrishiMitra गप्पा', placeholder: 'पिकां, माती वा हवामानाविशीं विचारात...', send: 'धाडात', listening: 'आयकता...' },
+  profile: { ...en.profile, title: 'म्हजो प्रोफाइल', language: 'भास', region: 'राज्य / प्रदेश', save: 'जतन करात', cancel: 'रद्द करात' },
+  common: { ...en.common, loading: 'लोड जाता...', error: 'कितें तरी चुकलें. परत येत्न करात.', back: 'फाटीं', next: 'मुखार', save: 'जतन करात', cancel: 'रद्द करात', retry: 'परत येत्न करात' },
+};
+
+const ks: Translations = {
+  ...en,
+  nav: { ...en.nav, home: 'گَر', scan: 'سکین', chat: 'چیٹ', history: 'توٲریخ', profile: 'پروفائل', schemes: 'سکیم', support: 'مدد' },
+  home: { ...en.home, greeting_morning: 'صُبح بخیر', greeting_afternoon: 'آداب', greeting_evening: 'شام بخیر', subtitle: 'کیاہ چھُو تُہۍ اَز پَننِی فصلَن ہُنٛد خیال تھاونہٕ خٲطرٕ تیار؟', crop_analysis: 'فصل تجزیہ', ask_krishimitra: 'KrishiMitra سٕتۍ پُژھیو', gov_schemes: 'سرکاری سکیم', farmer_support: 'کسان مدد', weather: 'موسم' },
+  chat: { ...en.chat, title: 'KrishiMitra چیٹ', placeholder: 'فصل، مٔٹی یا موسم باپت پُژھیو...', send: 'پھیریو', listening: 'سُنان...' },
+  profile: { ...en.profile, title: 'مےٚ پروفائل', language: 'زبان', region: 'ریاست / علاقہ', save: 'محفوظ کٔریو', cancel: 'منسوخ کٔریو' },
+  common: { ...en.common, loading: 'لوڈ گژھان...', error: 'کینٛہہ گوٚ غلط۔ دوبارٕ کوشش کٔریو۔', back: 'واپس', next: 'اگےٚ', save: 'محفوظ کٔریو', cancel: 'منسوخ کٔریو', retry: 'دوبارٕ کوشش کٔریو' },
+};
+
 export const TRANSLATIONS: Record<Language, Translations> = {
-  en, hi, mr, pa, gu, ta, te, kn, bn, ml, or,
+  en, hi, mr, pa, gu, ta, te, kn, bn, ml, or, as, ur, kok, ks,
 };

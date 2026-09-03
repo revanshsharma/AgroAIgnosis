@@ -5,6 +5,7 @@ import { HfInference } from "@huggingface/inference";
 // Initialize AI clients with proper error handling  
 const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 const huggingfaceApiKey = process.env.HUGGINGFACE_API_KEY;
+const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 let genAI: any = null;
 let hf: HfInference | null = null;
@@ -52,6 +53,12 @@ export interface ChatResponse {
   actionable?: boolean;
 }
 
+export interface ChatContext {
+  weather?: unknown;
+  mandi?: unknown;
+  recentAnalyses?: unknown[];
+}
+
 const ANALYSIS_LANGUAGE_MAP: Record<string, string> = {
   en: "English",
   hi: "Hindi",
@@ -62,6 +69,12 @@ const ANALYSIS_LANGUAGE_MAP: Record<string, string> = {
   bn: "Bengali",
   gu: "Gujarati",
   pa: "Punjabi",
+  ml: "Malayalam",
+  or: "Odia",
+  as: "Assamese",
+  ur: "Urdu",
+  kok: "Konkani",
+  ks: "Kashmiri",
 };
 
 function resolveAnalysisLanguage(languageCode?: string): string {
@@ -89,7 +102,7 @@ export async function analyzeCropImage(base64Image: string, mimeType: string = '
         "preventiveMeasures": ["measure1", "measure2"]
       }
 
-      Important: Write all user-facing values in ${responseLanguage}. Keep status exactly as healthy|disease_detected|needs_attention and confidence as high|medium|low in English.`;
+      Important: Write every user-facing value, including every item in treatmentSteps and preventiveMeasures, only in ${responseLanguage}. Do not mix in English or use transliteration. Keep status exactly as healthy|disease_detected|needs_attention and confidence as high|medium|low in English.`;
 
       const userPrompt = `Analyze this crop image for diseases, pests, nutritional deficiencies, or other health issues. Provide specific recommendations suitable for Indian agricultural practices and climate conditions. Respond in ${responseLanguage}.`;
 
@@ -109,7 +122,7 @@ export async function analyzeCropImage(base64Image: string, mimeType: string = '
       ];
 
       const response = await genAI.models.generateContent({
-        model: "gemini-3.6-flash",
+        model: geminiModel,
         config: {
           systemInstruction: systemPrompt,
           responseMimeType: "application/json",
@@ -227,7 +240,7 @@ export async function analyzeSoilImage(base64Image: string, mimeType: string = '
         "improvements": ["improvement1", "improvement2"]
       }
 
-      Important: Write all user-facing values in ${responseLanguage}. Keep status exactly as healthy|needs_attention|poor and confidence as high|medium|low in English.`;
+      Important: Write every user-facing value, including every item in improvements, only in ${responseLanguage}. Do not mix in English or use transliteration. Keep status exactly as healthy|needs_attention|poor and confidence as high|medium|low in English.`;
 
       const userPrompt = `Analyze this soil image for quality, composition, moisture content, organic matter, and overall health. Provide specific recommendations for soil improvement suitable for Indian agricultural practices. Respond in ${responseLanguage}.`;
 
@@ -247,7 +260,7 @@ export async function analyzeSoilImage(base64Image: string, mimeType: string = '
       ];
 
       const response = await genAI.models.generateContent({
-        model: "gemini-3.6-flash",
+        model: geminiModel,
         config: {
           systemInstruction: systemPrompt,
           responseMimeType: "application/json",
@@ -289,7 +302,7 @@ export async function analyzeSoilImage(base64Image: string, mimeType: string = '
   return analyzeSoilVisually();
 }
 
-export async function generateChatResponse(message: string, userRegion?: string, userName?: string, primaryCrop?: string, languageCode: string = 'en'): Promise<ChatResponse> {
+export async function generateChatResponse(message: string, userRegion?: string, userName?: string, primaryCrop?: string, languageCode: string = 'en', context: ChatContext = {}, isVoice = false): Promise<ChatResponse> {
   const responseLanguage = resolveAnalysisLanguage(languageCode);
   // Try Gemini first if available
   if (genAI) {
@@ -302,19 +315,23 @@ export async function generateChatResponse(message: string, userRegion?: string,
         primaryCrop ? `Their primary crop is ${primaryCrop}.` : '',
       ].filter(Boolean).join(' ');
 
-      const systemPrompt = `You are KrishiMitra, an AI agricultural assistant specialized in helping Indian farmers. You provide practical, actionable advice about farming, crop diseases, soil management, irrigation, fertilization, and pest control specific to Indian agricultural practices and climate conditions. ${userContext}
+      const liveContext = JSON.stringify(context);
+      const systemPrompt = `You are KrishiMitra, a warm, patient, human-sounding agricultural companion for Indian farmers. Give practical, actionable advice about farming, crop diseases, soil management, irrigation, fertilization, pest control, markets, and government services. ${userContext}
+
+      Use the live app data below when it is relevant. Treat it as the latest available snapshot, never invent missing values, and clearly say when a live service is unavailable:
+      ${liveContext}
       
       Respond with JSON containing:
       {
-        "response": "helpful, practical response in simple language",
+        "response": "helpful, warm, practical response in simple language",
         "relatedTopics": ["topic1", "topic2", "topic3"],
         "actionable": true/false
       }
 
-      Important: Write all user-facing values in ${responseLanguage}. Keep only JSON keys in English.`;
+      Important: Write all user-facing values in ${responseLanguage}. Keep only JSON keys in English. ${isVoice ? "This is a voice request: use short natural sentences, avoid markdown, avoid reading raw JSON or URLs aloud, address the farmer by name when it feels natural, acknowledge their concern, and end with one useful next step or gentle follow-up question." : "Keep the response easy to scan and conversational."} Never claim to have performed an action you cannot perform.`;
 
       const response = await genAI.models.generateContent({
-        model: "gemini-3.6-flash",
+        model: geminiModel,
         config: {
           systemInstruction: systemPrompt,
           responseMimeType: "application/json",
@@ -460,7 +477,21 @@ export interface MandiData {
   prices: MandiPrice[];
 }
 
+const MANDI_CACHE_TTL_MS = 60 * 60 * 1000;
+const mandiCache = new Map<string, { expiresAt: number; request: Promise<MandiData> }>();
+
 export async function getMandiPrices(region: string, languageCode: string = 'en'): Promise<MandiData> {
+  const cacheKey = `${region}:${languageCode}`;
+  const cached = mandiCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.request;
+
+  const request = fetchMandiPrices(region, languageCode);
+  mandiCache.set(cacheKey, { expiresAt: Date.now() + MANDI_CACHE_TTL_MS, request });
+  request.catch(() => mandiCache.delete(cacheKey));
+  return request;
+}
+
+async function fetchMandiPrices(region: string, languageCode: string = 'en'): Promise<MandiData> {
   const responseLanguage = resolveAnalysisLanguage(languageCode);
   const today = new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
 
@@ -492,7 +523,7 @@ Prices should reflect current seasonal trends for ${region}.
 Important: Write all user-facing values (region/date/crop/market/unit) in ${responseLanguage}. Keep trend exactly as up|down|stable in English.`;
 
       const response = await genAI.models.generateContent({
-        model: "gemini-3.6-flash",
+        model: geminiModel,
         config: { responseMimeType: "application/json" },
         contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
@@ -578,7 +609,7 @@ Use realistic Indian agrochemical products and doses. All numbers should be for 
 Important: Write all user-facing values in ${responseLanguage}. Keep only JSON keys in English.`;
 
       const response = await genAI.models.generateContent({
-        model: "gemini-3.6-flash",
+        model: geminiModel,
         config: { responseMimeType: "application/json" },
         contents: [{ role: "user", parts: [{ text: prompt }] }],
       });
@@ -653,23 +684,46 @@ function generateRelatedTopics(message: string, languageCode: string = 'en'): st
 
 function generateFallbackResponse(message: string, userRegion?: string, languageCode: string = 'en'): string {
   const messageLower = message.toLowerCase();
-  const regionText = userRegion ? ` for ${userRegion} region` : '';
-  
-  if (messageLower.includes('disease')) {
-    return `For crop disease management${regionText}, start by identifying the specific symptoms. Remove affected plant parts, improve air circulation, and apply appropriate organic treatments like neem oil. Ensure proper drainage and avoid overwatering.`;
-  }
-  
-  if (messageLower.includes('pest')) {
-    return `Pest control${regionText} can be managed using integrated pest management. Use organic pesticides like neem oil, encourage beneficial insects, maintain proper plant spacing, and remove affected plants promptly.`;
-  }
-  
-  if (messageLower.includes('fertilizer')) {
-    return `For fertilization${regionText}, use a balanced approach with organic compost, well-rotted manure, and appropriate NPK fertilizers based on your soil test results. Apply during the growing season for best results.`;
-  }
-  
-  if (messageLower.includes('water') || messageLower.includes('irrigation')) {
-    return `Water management${regionText} is crucial. Water deeply but less frequently, use drip irrigation when possible, mulch to retain moisture, and adjust watering based on monsoon patterns and soil moisture.`;
-  }
-  
-  return `I'm here to help with your farming questions${regionText}. Feel free to ask about crop diseases, soil care, pest control, fertilization, irrigation, or any other agricultural topic. I'll provide practical advice tailored to Indian farming practices.`;
+  const region = userRegion || "your region";
+  const intent = messageLower.includes("disease") || messageLower.includes("रोग") || messageLower.includes("बीमारी")
+    ? "disease"
+    : messageLower.includes("pest") || messageLower.includes("कीट") || messageLower.includes("किड")
+      ? "pest"
+      : messageLower.includes("fertilizer") || messageLower.includes("fertiliser") || messageLower.includes("खाद") || messageLower.includes("उर्वरक")
+        ? "fertilizer"
+        : messageLower.includes("water") || messageLower.includes("irrigation") || messageLower.includes("पानी") || messageLower.includes("सिंचाई")
+          ? "water"
+          : "general";
+
+  const fallback: Record<string, Record<string, string>> = {
+    en: {
+      disease: `I understand your concern about crop disease in ${region}. Remove affected leaves, improve air circulation, and avoid overwatering. Please share a clear crop photo for more specific guidance.`,
+      pest: `For pests in ${region}, inspect the underside of leaves, remove badly affected parts, and consider neem-based treatment. Please tell me the crop and symptoms so I can guide you better.`,
+      fertilizer: `For your crop in ${region}, use compost and fertilizer according to a soil test and crop stage. Please tell me the crop and growth stage for a safer recommendation.`,
+      water: `For watering in ${region}, check soil moisture before irrigating and prefer deep, less frequent watering. Adjust the schedule after rain and avoid waterlogging.`,
+      general: `I am here to help with your farming questions in ${region}. You can ask about disease, pests, fertilizer, soil, weather, irrigation, or market prices.`,
+    },
+    hi: {
+      disease: `${region} में फसल की बीमारी की आपकी चिंता समझता हूं। प्रभावित पत्तियां हटाएं, हवा का संचार बढ़ाएं और अधिक पानी न दें। बेहतर सलाह के लिए फसल की साफ तस्वीर भेजें।`,
+      pest: `${region} में कीट नियंत्रण के लिए पत्तियों के नीचे जांच करें, बहुत प्रभावित हिस्से हटाएं और नीम आधारित उपचार पर विचार करें। फसल और लक्षण बताएं।`,
+      fertilizer: `${region} में फसल के लिए मिट्टी की जांच और फसल की अवस्था के अनुसार खाद दें। सुरक्षित सलाह के लिए फसल और उसकी अवस्था बताएं।`,
+      water: `${region} में सिंचाई से पहले मिट्टी की नमी जांचें और कम बार, गहरी सिंचाई करें। बारिश के बाद पानी भरने से बचें।`,
+      general: `मैं ${region} में आपकी खेती से जुड़े सवालों में मदद करने के लिए यहां हूं। बीमारी, कीट, खाद, मौसम, सिंचाई या मंडी भाव पूछें।`,
+    },
+    mr: { general: `मी ${region} मधील तुमच्या शेतीच्या प्रश्नांसाठी येथे आहे. रोग, कीड, खत, हवामान, सिंचन किंवा बाजारभाव विचारा.` },
+    pa: { general: `ਮੈਂ ${region} ਵਿੱਚ ਤੁਹਾਡੀ ਖੇਤੀ ਨਾਲ ਜੁੜੇ ਸਵਾਲਾਂ ਲਈ ਮਦਦ ਕਰਨ ਵਾਸਤੇ ਇੱਥੇ ਹਾਂ। ਰੋਗ, ਕੀੜੇ, ਖਾਦ, ਮੌਸਮ ਜਾਂ ਮੰਡੀ ਭਾਅ ਪੁੱਛੋ।` },
+    gu: { general: `હું ${region} માં તમારી ખેતીના પ્રશ્નોમાં મદદ કરવા અહીં છું. રોગ, જીવાત, ખાતર, હવામાન, સિંચાઈ અથવા બજાર ભાવ વિશે પૂછો.` },
+    ta: { general: `${region} பகுதியில் உங்கள் விவசாயக் கேள்விகளுக்கு உதவ நான் இங்கே இருக்கிறேன். நோய், பூச்சி, உரம், வானிலை அல்லது நீர்ப்பாசனம் பற்றி கேளுங்கள்.` },
+    te: { general: `${region} లో మీ వ్యవసాయ ప్రశ్నలకు సహాయం చేయడానికి నేను ఇక్కడ ఉన్నాను. వ్యాధి, పురుగులు, ఎరువు, వాతావరణం లేదా నీటిపారుదల గురించి అడగండి.` },
+    kn: { general: `${region} ನಲ್ಲಿ ನಿಮ್ಮ ಕೃಷಿ ಪ್ರಶ್ನೆಗಳಿಗೆ ಸಹಾಯ ಮಾಡಲು ನಾನು ಇಲ್ಲಿದ್ದೇನೆ. ರೋಗ, ಕೀಟ, ಗೊಬ್ಬರ, ಹವಾಮಾನ ಅಥವಾ ನೀರಾವರಿ ಬಗ್ಗೆ ಕೇಳಿ.` },
+    bn: { general: `${region}-এ আপনার কৃষি সংক্রান্ত প্রশ্নে সাহায্য করতে আমি এখানে আছি। রোগ, পোকা, সার, আবহাওয়া বা সেচ সম্পর্কে জিজ্ঞাসা করুন।` },
+    ml: { general: `${region} ലെ നിങ്ങളുടെ കൃഷി ചോദ്യങ്ങൾക്ക് സഹായിക്കാൻ ഞാൻ ഇവിടെയുണ്ട്. രോഗം, കീടം, വളം, കാലാവസ്ഥ അല്ലെങ്കിൽ ജലസേചനം ചോദിക്കൂ.` },
+    or: { general: `${region} ରେ ଆପଣଙ୍କ କୃଷି ପ୍ରଶ୍ନରେ ସାହାଯ୍ୟ କରିବାକୁ ମୁଁ ଏଠାରେ ଅଛି। ରୋଗ, କୀଟ, ସାର, ପାଣିପାଗ କିମ୍ବା ଜଳସେଚନ ପଚାରନ୍ତୁ।` },
+    as: { general: `${region} ত আপোনাৰ কৃষি প্ৰশ্নত সহায় কৰিবলৈ মই ইয়াত আছোঁ। ৰোগ, পোক, সাৰ, বতৰ বা জলসিঞ্চনৰ বিষয়ে সোধক।` },
+    ur: { general: `میں ${region} میں آپ کے زرعی سوالات میں مدد کے لیے حاضر ہوں۔ بیماری، کیڑے، کھاد، موسم یا آبپاشی کے بارے میں پوچھیں۔` },
+    kok: { general: `हांव ${region} तुज्या शेती विशीं प्रश्नांक मदत करपाक हांगा आसां। रोग, कीड, खत, हवामान वा बाजार भाव विचारात.` },
+    ks: { general: `بہٕ ${region} منز تُہٕنٛدِ زرٕعی سوالن منز مدد کرنہٕ خٲطرٕ چھُس۔ بیماری، کیٖڑ، کھاد، موسم یا آبپاشی متعلق پُچھِو۔` },
+  };
+  const localized = fallback[languageCode.toLowerCase()];
+  return localized?.[intent] || localized?.general || fallback.en[intent];
 }

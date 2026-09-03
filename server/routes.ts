@@ -243,7 +243,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Missing required fields: message, userId" });
       }
 
-      const chatResponse = await generateChatResponse(message, userRegion, userName, primaryCrop, language);
+      const fertilizerRequested = /fertilizer|fertiliser|manure|npk|खाद|उर्वरक/i.test(message);
+      const [weatherResult, mandiResult, analysesResult, fertilizerResult] = await Promise.allSettled([
+        getWeatherForRegion(userRegion || "Maharashtra"),
+        getMandiPrices(userRegion || "Maharashtra", language || "en"),
+        storage.getUserAnalysisResults(userId, 3),
+        fertilizerRequested
+          ? getFertilizerAdvice(
+            primaryCrop || "current crop",
+            1,
+            "Loamy",
+            "Current growing stage",
+            "Rain-fed",
+            userRegion || "Maharashtra",
+            language || "en",
+          )
+          : Promise.resolve(undefined),
+      ]);
+
+      const chatContext = {
+        weather: weatherResult.status === "fulfilled" ? weatherResult.value : undefined,
+        mandi: mandiResult.status === "fulfilled" ? mandiResult.value : undefined,
+        recentAnalyses: analysesResult.status === "fulfilled" ? analysesResult.value.map((analysis) => ({
+          cropType: analysis.cropType,
+          diagnosis: analysis.diagnosis,
+          status: analysis.status,
+          recommendations: analysis.recommendations,
+          createdAt: analysis.createdAt,
+        })) : undefined,
+        fertilizerAdvice: fertilizerResult.status === "fulfilled" ? fertilizerResult.value : undefined,
+      };
+
+      const chatResponse = await generateChatResponse(message, userRegion, userName, primaryCrop, language, chatContext, Boolean(isVoice));
       
       const chatData = {
         userId,

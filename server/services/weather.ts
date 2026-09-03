@@ -111,7 +111,20 @@ const STATE_COORDS: Record<string, { lat: number; lon: number; city: string }> =
   "West Bengal": { lat: 22.5726, lon: 88.3639, city: "Kolkata" },
 };
 
+const WEATHER_CACHE_TTL_MS = 10 * 60 * 1000;
+const weatherCache = new Map<string, { expiresAt: number; request: Promise<WeatherData> }>();
+
 export async function getWeatherForRegion(region: string): Promise<WeatherData> {
+  const cached = weatherCache.get(region);
+  if (cached && cached.expiresAt > Date.now()) return cached.request;
+
+  const request = fetchWeatherForRegion(region);
+  weatherCache.set(region, { expiresAt: Date.now() + WEATHER_CACHE_TTL_MS, request });
+  request.catch(() => weatherCache.delete(region));
+  return request;
+}
+
+async function fetchWeatherForRegion(region: string): Promise<WeatherData> {
   const coords = STATE_COORDS[region] || STATE_COORDS["Maharashtra"];
   const { lat, lon, city } = coords;
 
