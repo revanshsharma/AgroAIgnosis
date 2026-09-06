@@ -6,7 +6,7 @@ import { classifyWithFallbackModel } from "./fallbackClassifier";
 // Initialize AI clients with proper error handling  
 const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 const huggingfaceApiKey = process.env.HUGGINGFACE_API_KEY;
-const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const geminiModel = process.env.GEMINI_MODEL || "gemini-3.6-flash";
 const MIN_LOCAL_MODEL_CONFIDENCE = 0.4;
 
 let genAI: any = null;

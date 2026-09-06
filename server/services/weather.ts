@@ -113,6 +113,7 @@ const STATE_COORDS: Record<string, { lat: number; lon: number; city: string }> =
 
 const WEATHER_CACHE_TTL_MS = 10 * 60 * 1000;
 const weatherCache = new Map<string, { expiresAt: number; request: Promise<WeatherData> }>();
+const lastKnownWeather = new Map<string, WeatherData>();
 
 export async function getWeatherForRegion(region: string): Promise<WeatherData> {
   const cached = weatherCache.get(region);
@@ -120,19 +121,47 @@ export async function getWeatherForRegion(region: string): Promise<WeatherData> 
 
   const request = fetchWeatherForRegion(region);
   weatherCache.set(region, { expiresAt: Date.now() + WEATHER_CACHE_TTL_MS, request });
-  request.catch(() => weatherCache.delete(region));
-  return request;
+  request
+    .then((weather) => lastKnownWeather.set(region, weather))
+    .catch(() => weatherCache.delete(region));
+
+  try {
+    return await request;
+  } catch (error) {
+    const previous = lastKnownWeather.get(region);
+    if (previous) {
+      console.warn(`[weather] Provider unavailable; serving cached weather for ${region}`);
+      return previous;
+    }
+    throw error;
+  }
 }
 
 async function fetchWeatherForRegion(region: string): Promise<WeatherData> {
   const coords = STATE_COORDS[region] || STATE_COORDS["Maharashtra"];
   const { lat, lon, city } = coords;
 
-  const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Asia%2FKolkata&forecast_days=5`;
+  const query = `?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Asia%2FKolkata&forecast_days=5`;
+  const endpoints = [
+    `https://api.open-meteo.com/v1/forecast${query}`,
+    `https://forecast-api.open-meteo.com/v1/forecast${query}`,
+  ];
 
-  const response = await fetch(weatherUrl);
-  if (!response.ok) {
-    throw new Error(`Weather API error: ${response.status}`);
+  let response: Response | undefined;
+  let lastStatus = 0;
+  for (const endpoint of endpoints) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      response = await fetch(endpoint, { headers: { "User-Agent": "KrishiMitra/1.0" } });
+      if (response.ok) break;
+      lastStatus = response.status;
+      if (response.status !== 429) break;
+      await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+    }
+    if (response?.ok) break;
+  }
+
+  if (!response?.ok) {
+    throw new Error(`Weather API error: ${lastStatus || "unavailable"}`);
   }
 
   const data = await response.json();

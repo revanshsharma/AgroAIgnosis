@@ -340,7 +340,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(weather);
     } catch (error) {
       console.error("Error fetching weather:", error);
-      res.status(500).json({ message: "Failed to fetch weather data" });
+      res.json({
+        region: `${(req.query.region as string) || "Maharashtra"}`,
+        current: {
+          temperature: 0,
+          feelsLike: 0,
+          humidity: 0,
+          windSpeed: 0,
+          precipitation: 0,
+          description: "Live weather temporarily unavailable",
+          icon: "cloudy",
+          isRaining: false,
+        },
+        forecast: [],
+        farmingAlert: "Live weather is temporarily unavailable. Please try again shortly.",
+      });
     }
   });
 
