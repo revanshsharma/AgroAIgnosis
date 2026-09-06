@@ -123,14 +123,26 @@ export async function analyzeCropImage(base64Image: string, mimeType: string = '
         },
       ];
 
-      const response = await genAI.models.generateContent({
-        model: geminiModel,
-        config: {
-          systemInstruction: systemPrompt,
-          responseMimeType: "application/json",
-        },
-        contents: contents
-      });
+      let response: any;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          response = await genAI.models.generateContent({
+            model: geminiModel,
+            config: {
+              systemInstruction: systemPrompt,
+              responseMimeType: "application/json",
+            },
+            contents: contents
+          });
+          break;
+        } catch (error: any) {
+          const status = error?.status || error?.error?.code;
+          const transient = status === 429 || status === 503 || status === "UNAVAILABLE";
+          if (!transient || attempt === 2) throw error;
+          await new Promise((resolve) => setTimeout(resolve, 800 * (attempt + 1)));
+          console.warn(`Gemini temporarily unavailable; retrying (${attempt + 1}/2)`);
+        }
+      }
 
       console.log("Gemini Vision API response received");
 

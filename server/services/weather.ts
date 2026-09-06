@@ -142,20 +142,17 @@ async function fetchWeatherForRegion(region: string): Promise<WeatherData> {
   const { lat, lon, city } = coords;
 
   const query = `?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Asia%2FKolkata&forecast_days=5`;
-  const endpoints = [
-    `https://api.open-meteo.com/v1/forecast${query}`,
-    `https://forecast-api.open-meteo.com/v1/forecast${query}`,
-  ];
+  const endpoints = [`https://api.open-meteo.com/v1/forecast${query}`];
 
   let response: Response | undefined;
   let lastStatus = 0;
   for (const endpoint of endpoints) {
-    for (let attempt = 0; attempt < 2; attempt += 1) {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
       response = await fetch(endpoint, { headers: { "User-Agent": "KrishiMitra/1.0" } });
       if (response.ok) break;
       lastStatus = response.status;
       if (response.status !== 429) break;
-      await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
+      await new Promise((resolve) => setTimeout(resolve, 750 * (attempt + 1)));
     }
     if (response?.ok) break;
   }
