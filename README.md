@@ -2,6 +2,20 @@
 
 KrishiMitra is a mobile-first agricultural assistant for Indian farmers. It combines crop and soil image analysis, multilingual agricultural chat, regional information, and practical farm-planning tools in one application.
 
+<p align="center">
+  <a href="https://krishimitra-g7eh.onrender.com"><strong>Live SIH Prototype</strong></a>
+  &nbsp; | &nbsp;
+  <a href="https://krishimitra-g7eh.onrender.com/api/health">API Health Check</a>
+</p>
+
+## SIH At A Glance
+
+KrishiMitra is an AI-enabled digital farming companion designed to help Indian farmers make faster, clearer decisions from the field. Farmers can scan crop and soil images, receive disease and treatment guidance, ask questions in regional languages, plan fertilizer use, check weather and mandi prices, and access government support from one mobile-first application.
+
+**Prototype:** [krishimitra-g7eh.onrender.com](https://krishimitra-g7eh.onrender.com)
+
+**Core impact:** accessible agricultural intelligence, multilingual support, practical recommendations, and a local ONNX disease-classification fallback that keeps the prototype useful when cloud AI is unavailable.
+
 ## What The App Does
 
 ### Farmer onboarding and profile
