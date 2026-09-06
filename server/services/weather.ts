@@ -158,7 +158,8 @@ async function fetchWeatherForRegion(region: string): Promise<WeatherData> {
   }
 
   if (!response?.ok) {
-    throw new Error(`Weather API error: ${lastStatus || "unavailable"}`);
+    console.warn(`[weather] Open-Meteo unavailable (${lastStatus || "network error"}); using wttr.in`);
+    return fetchWttrWeather(city, region);
   }
 
   const data = await response.json();
@@ -197,5 +198,59 @@ async function fetchWeatherForRegion(region: string): Promise<WeatherData> {
     current,
     forecast,
     farmingAlert,
+  };
+}
+
+function weatherDescriptionToIcon(description: string): string {
+  const text = description.toLowerCase();
+  if (text.includes("thunder")) return "stormy";
+  if (text.includes("rain") || text.includes("shower")) return "rainy";
+  if (text.includes("drizzle")) return "drizzle";
+  if (text.includes("cloud") || text.includes("overcast")) return "partly_cloudy";
+  if (text.includes("fog") || text.includes("mist")) return "foggy";
+  return "sunny";
+}
+
+async function fetchWttrWeather(city: string, region: string): Promise<WeatherData> {
+  const response = await fetch(`https://wttr.in/${encodeURIComponent(city)}?format=j1`, {
+    headers: { "User-Agent": "KrishiMitra/1.0" },
+  });
+  if (!response.ok) {
+    throw new Error(`Weather fallback API error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  const currentData = data.current_condition?.[0];
+  const currentDescription = currentData?.weatherDesc?.[0]?.value || "Unknown";
+  const currentWeather = decodeWeatherCode(Number(currentData?.weatherCode) || 0);
+  const current: WeatherData["current"] = {
+    temperature: Number(currentData?.temp_C) || 0,
+    feelsLike: Number(currentData?.FeelsLikeC) || 0,
+    humidity: Number(currentData?.humidity) || 0,
+    windSpeed: Number(currentData?.windspeedKmph) || 0,
+    precipitation: Number(currentData?.precipMM) || 0,
+    description: currentDescription,
+    icon: weatherDescriptionToIcon(currentDescription) || currentWeather.icon,
+    isRaining: /rain|drizzle|shower/i.test(currentDescription) || Number(currentData?.precipMM) > 0,
+  };
+
+  const forecast: WeatherData["forecast"] = (data.weather || []).slice(0, 5).map((day: any) => {
+    const description = day.hourly?.[4]?.weatherDesc?.[0]?.value || "Unknown";
+    return {
+      date: day.date,
+      day: getDayName(day.date),
+      maxTemp: Number(day.maxtempC) || 0,
+      minTemp: Number(day.mintempC) || 0,
+      precipitation: Number(day.totalSnow_cm) || 0,
+      description,
+      icon: weatherDescriptionToIcon(description),
+    };
+  });
+
+  return {
+    region: `${city}, ${region}`,
+    current,
+    forecast,
+    farmingAlert: buildFarmingAlert(current, forecast),
   };
 }
