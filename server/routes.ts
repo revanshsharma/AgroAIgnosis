@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { insertAnalysisResultSchema, insertChatMessageSchema } from "@shared/schema";
 import { analyzeCropImage, analyzeSoilImage, generateChatResponse, getMandiPrices, getFertilizerAdvice } from "./services/openai";
 import { getWeatherForRegion } from "./services/weather";
+import { generateSpeech } from "./services/sarvam";
 import multer from "multer";
 import rateLimit from "express-rate-limit";
 
@@ -31,6 +32,21 @@ const authLimiter = rateLimit({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+
+  app.post("/api/tts", async (req, res) => {
+    try {
+      const { text, language } = req.body;
+      if (!text || typeof text !== "string") {
+        return res.status(400).json({ message: "Text is required" });
+      }
+
+      const speech = await generateSpeech(text, typeof language === "string" ? language : "en");
+      res.json({ audio: `data:audio/wav;base64,${speech.audio}`, language: speech.language });
+    } catch (error) {
+      console.error("Error generating speech:", error);
+      res.status(503).json({ message: "Multilingual voice service is not configured or unavailable" });
+    }
+  });
 
   // ─── Auth Routes ─────────────────────────────────────────────────────────────
 

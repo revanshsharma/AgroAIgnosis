@@ -116,6 +116,17 @@ flowchart LR
 - `/profile` - Profile, language, and preference context.
 - `/why-krishimitra` - Public product explanation/demo page.
 
+## SIH Prototype Showcase
+
+The screenshots below are captured from the running application using the real workflows.
+
+<p align="center">
+  <img src="client/public/assets/sih-crop-analysis.png" alt="KrishiMitra crop disease analysis showing tomato early blight, high confidence, treatment steps, and preventive measures" width="49%" />
+  <img src="client/public/assets/sih-fertilizer-calculator.png" alt="KrishiMitra fertilizer calculator showing tomato NPK recommendations, fertilizer quantities, pest management, and application schedule" width="49%" />
+</p>
+
+**Demo scenarios:** tomato early-blight image analysis with confidence and actionable treatment guidance, followed by a 2.5-acre tomato fertilizer plan for loamy soil, vegetative growth, and drip irrigation.
+
 ## Technology Stack
 
 ### Frontend
@@ -154,6 +165,7 @@ flowchart LR
 | GET | `/api/analysis-result/:id` | Read one analysis |
 | POST | `/api/chat` | Generate and save an agricultural chat response |
 | GET | `/api/chat-history/:userId` | List saved chat messages |
+| POST | `/api/tts` | Generate multilingual speech audio for a response |
 | GET | `/api/weather` | Get weather for a region |
 | GET | `/api/mandi-prices` | Get regional mandi prices |
 | POST | `/api/fertilizer-advice` | Generate crop-specific fertilizer advice |
@@ -181,18 +193,30 @@ The combined development server serves both the frontend and backend at:
 http://localhost:5000
 ```
 
+### Host a live prototype
+
+Deploy the repository as a Node web service on Render. The included `render.yaml` uses `npm run build` and `npm start`, serves the frontend and API from one URL, and checks `/api/health`.
+
+1. Push the repository to GitHub.
+2. In Render, choose **New > Blueprint**, select the repository, and apply `render.yaml`.
+3. Add `GEMINI_API_KEY`, `SARVAM_API_KEY`, and `HUGGINGFACE_API_KEY` in the service environment settings.
+4. Share the generated `https://...onrender.com` URL with evaluators.
+
+The free Render service may sleep after inactivity, so open the URL a few minutes before the presentation and run through onboarding, crop analysis, chat, weather, mandi prices, and Marathi voice playback once.
+
 ### Environment variables
 
 Create a `.env` file in the project root:
 
 ```env
 GEMINI_API_KEY=your_gemini_api_key
+SARVAM_API_KEY=your_sarvam_api_key
 HUGGINGFACE_API_KEY=your_huggingface_api_key
 SESSION_SECRET=replace_with_a_long_random_secret
 DATABASE_URL=your_postgres_connection_string
 ```
 
-`GEMINI_API_KEY` is required for live Gemini chat and vision analysis. Hugging Face and database variables are optional depending on the selected deployment/storage configuration.
+`GEMINI_API_KEY` is required for live Gemini chat and vision analysis. `SARVAM_API_KEY` enables server-generated multilingual voice responses through Sarvam Bulbul v3, including Marathi. Hugging Face and database variables are optional depending on the selected deployment/storage configuration.
 
 ## Production Build
 

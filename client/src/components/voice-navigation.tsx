@@ -25,6 +25,22 @@ const SPEECH_LANGUAGES: Record<string, string> = {
   ks: "ks-IN",
 };
 
+const LANGUAGE_VOICE_HINTS: Record<string, string[]> = {
+  en: ["english", "united states", "united kingdom"],
+  hi: ["hindi", "हिन्दी", "india", "google हिन्दी", "microsoft heera", "sangeeta"],
+  mr: ["marathi", "मराठी", "google मराठी", "microsoft heera", "microsoft hera"],
+  pa: ["punjabi", "ਪੰਜਾਬੀ", "google ਪੰਜਾਬੀ"],
+  gu: ["gujarati", "ગુજરાતી", "google ગુજરાતી"],
+  ta: ["tamil", "தமிழ்", "google தமிழ்"],
+  te: ["telugu", "తెలుగు", "google తెలుగు"],
+  kn: ["kannada", "ಕನ್ನಡ", "google ಕನ್ನಡ"],
+  bn: ["bengali", "বাংলা", "google বাংলা"],
+  ml: ["malayalam", "മലയാളം", "google മലയാളം"],
+  or: ["odia", "oriya", "ଓଡ଼ିଆ", "google ଓଡ଼ିଆ"],
+  as: ["assamese", "অসমীয়া", "google অসমীয়া"],
+  ur: ["urdu", "اردو", "google اردو"],
+};
+
 function VoiceNavigation() {
   const { language, t } = useLanguage();
   const { profile } = useUserProfile();
@@ -48,23 +64,65 @@ function VoiceNavigation() {
     return () => window.speechSynthesis.removeEventListener("voiceschanged", loadVoices);
   }, []);
 
-  const speak = (message: string) => {
-    if (!("speechSynthesis" in window) || !message) return;
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(message.slice(0, 900));
-    const locale = SPEECH_LANGUAGES[language] || "en-IN";
-    utterance.lang = locale;
-    const voices = voicesRef.current.length > 0
-      ? voicesRef.current
-      : window.speechSynthesis.getVoices();
+  const findMatchingVoice = (langCode: string, voices: SpeechSynthesisVoice[]) => {
+    const locale = SPEECH_LANGUAGES[langCode] || "en-IN";
     const normalizedLocale = locale.toLowerCase();
-    const normalizedLanguage = language.toLowerCase();
-    const matchingVoice = voices.find((voice) => voice.lang.toLowerCase() === normalizedLocale)
-      || voices.find((voice) => voice.lang.toLowerCase().startsWith(`${normalizedLanguage}-`));
-    if (matchingVoice) utterance.voice = matchingVoice;
-    utterance.rate = 0.95;
-    utterance.pitch = 1;
-    window.speechSynthesis.speak(utterance);
+    const normalizedLanguage = langCode.toLowerCase();
+    const hints = LANGUAGE_VOICE_HINTS[normalizedLanguage] || [];
+
+    return voices.find((voice) => voice.lang.toLowerCase() === normalizedLocale)
+      || voices.find((voice) => voice.lang.toLowerCase().startsWith(`${normalizedLanguage}-`))
+      || voices.find((voice) => voice.lang.toLowerCase().startsWith(normalizedLanguage))
+      || voices.find((voice) => hints.some((hint) => voice.name.toLowerCase().includes(hint)))
+      || voices.find((voice) => voice.name.toLowerCase().includes(normalizedLanguage))
+      || null;
+  };
+
+  const speakWithBrowser = (message: string) => {
+    if (!("speechSynthesis" in window) || !message) return;
+
+    const speakWithSelection = (voiceList: SpeechSynthesisVoice[]) => {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(message.slice(0, 900));
+      const locale = SPEECH_LANGUAGES[language] || "en-IN";
+      utterance.lang = locale;
+
+      const matchingVoice = findMatchingVoice(language, voiceList);
+      if (matchingVoice) utterance.voice = matchingVoice;
+      utterance.rate = 0.95;
+      utterance.pitch = 1;
+      window.speechSynthesis.speak(utterance);
+    };
+
+    const trySpeak = (attempt = 0) => {
+      const voiceList = voicesRef.current.length > 0 ? voicesRef.current : window.speechSynthesis.getVoices();
+      if (voiceList.length === 0 && attempt < 8) {
+        window.setTimeout(() => trySpeak(attempt + 1), 250 + attempt * 150);
+        return;
+      }
+
+      speakWithSelection(voiceList.length > 0 ? voiceList : window.speechSynthesis.getVoices());
+    };
+
+    trySpeak();
+  };
+
+  const speak = async (message: string) => {
+    if (!message) return;
+    try {
+      const response = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: message, language }),
+      });
+      if (!response.ok) throw new Error("TTS unavailable");
+      const result = await response.json() as { audio?: string };
+      if (!result.audio) throw new Error("No audio returned");
+      const audio = new Audio(result.audio);
+      await audio.play();
+    } catch {
+      speakWithBrowser(message);
+    }
   };
 
   const askKrishiMitra = async (message: string) => {
@@ -88,7 +146,7 @@ function VoiceNavigation() {
       const result = await response.json();
       const reply = result.response || t.common.error;
       setAssistantReply(reply);
-      speak(reply);
+      void speak(reply);
     } catch {
       toast({ title: t.common.error, description: "KrishiMitra could not answer right now. Please try again.", variant: "destructive" });
     } finally {
@@ -201,7 +259,7 @@ function VoiceNavigation() {
                 KrishiMitra
               </div>
               <p className="text-sm mt-1 leading-relaxed max-h-40 overflow-y-auto">{assistantReply}</p>
-              <Button variant="ghost" size="sm" className="mt-1 px-2 h-7 text-xs" onClick={() => speak(assistantReply)}>
+              <Button variant="ghost" size="sm" className="mt-1 px-2 h-7 text-xs" onClick={() => void speak(assistantReply)}>
                 <Volume2 className="h-3.5 w-3.5 mr-1" /> Read aloud
               </Button>
             </>}

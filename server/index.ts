@@ -3,6 +3,7 @@ import session from "express-session";
 import MemoryStore from "memorystore";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import { initFallbackClassifier } from "./services/fallbackClassifier";
 
 const MemoryStoreSession = MemoryStore(session);
 
@@ -53,6 +54,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  initFallbackClassifier().catch((error) => {
+    console.warn("Local fallback classifier could not be initialized:", error);
+  });
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

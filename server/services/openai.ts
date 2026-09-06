@@ -1,11 +1,13 @@
 import "dotenv/config";
 import { GoogleGenAI } from "@google/genai";
 import { HfInference } from "@huggingface/inference";
+import { classifyWithFallbackModel } from "./fallbackClassifier";
 
 // Initialize AI clients with proper error handling  
 const geminiApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 const huggingfaceApiKey = process.env.HUGGINGFACE_API_KEY;
 const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const MIN_LOCAL_MODEL_CONFIDENCE = 0.4;
 
 let genAI: any = null;
 let hf: HfInference | null = null;
@@ -156,6 +158,34 @@ export async function analyzeCropImage(base64Image: string, mimeType: string = '
     } catch (error: any) {
       console.error("Gemini crop analysis failed:", error?.message || error, "status:", error?.status);
     }
+  }
+
+  // Prefer the local ONNX model before using a remote fallback.
+  try {
+    console.log("Falling back to local plant disease model...");
+    const result = await classifyWithFallbackModel(Buffer.from(base64Image, 'base64'));
+    if (!Number.isFinite(result.confidence) || result.confidence < MIN_LOCAL_MODEL_CONFIDENCE) {
+      throw new Error(
+        `Local model confidence too low (${(result.confidence * 100).toFixed(1)}%)`,
+      );
+    }
+
+    const treatment = result.treatment;
+    const confidence = result.confidence > 0.7 ? 'high' : 'medium';
+
+    return {
+      cropType: result.crop,
+      diagnosis: result.diagnosis,
+      recommendations: [treatment.summary, ...(treatment.steps || [])]
+        .filter(Boolean)
+        .join(" "),
+      status: result.isHealthy ? 'healthy' : 'disease_detected',
+      confidence,
+      treatmentSteps: treatment.steps || [],
+      preventiveMeasures: [],
+    };
+  } catch (error) {
+    console.warn("Local fallback classifier unavailable:", error instanceof Error ? error.message : error);
   }
 
   // Fallback to HuggingFace if Gemini fails or is unavailable
