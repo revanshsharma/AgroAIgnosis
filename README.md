@@ -120,9 +120,14 @@ flowchart LR
 
 The screenshots below are captured from the running application using the real workflows.
 
+<p align="center"><strong>Crop disease analysis</strong></p>
 <p align="center">
-  <img src="client/public/assets/sih-crop-analysis.png" alt="KrishiMitra crop disease analysis showing tomato early blight, high confidence, treatment steps, and preventive measures" width="49%" />
-  <img src="client/public/assets/sih-fertilizer-calculator.png" alt="KrishiMitra fertilizer calculator showing tomato NPK recommendations, fertilizer quantities, pest management, and application schedule" width="49%" />
+  <img src="client/public/assets/sih-crop-analysis.png" alt="KrishiMitra crop disease analysis showing tomato early blight, high confidence, treatment steps, and preventive measures" width="100%" />
+</p>
+
+<p align="center"><strong>Fertilizer calculator</strong></p>
+<p align="center">
+  <img src="client/public/assets/sih-fertilizer-calculator.png" alt="KrishiMitra fertilizer calculator showing tomato NPK recommendations, fertilizer quantities, pest management, and application schedule" width="100%" />
 </p>
 
 **Demo scenarios:** tomato early-blight image analysis with confidence and actionable treatment guidance, followed by a 2.5-acre tomato fertilizer plan for loamy soil, vegetative growth, and drip irrigation.
