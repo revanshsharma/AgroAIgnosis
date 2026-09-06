@@ -4,7 +4,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-const MODEL_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "models");
+const SERVICE_DIR = path.dirname(fileURLToPath(import.meta.url));
+const MODEL_DIR = [
+  path.resolve(SERVICE_DIR, "..", "models"),
+  path.resolve(SERVICE_DIR, "..", "server", "models"),
+].find((directory) => fs.existsSync(path.join(directory, "plant_disease_model.onnx")))
+  || path.resolve(SERVICE_DIR, "..", "models");
 const MODEL_PATH = path.join(MODEL_DIR, "plant_disease_model.onnx");
 const CLASS_INDICES_PATH = path.join(MODEL_DIR, "class_indices.json");
 const TREATMENT_PATH = path.join(MODEL_DIR, "treatment_info.json");

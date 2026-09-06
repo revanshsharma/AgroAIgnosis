@@ -8,6 +8,7 @@ import { initFallbackClassifier } from "./services/fallbackClassifier";
 const MemoryStoreSession = MemoryStore(session);
 
 const app = express();
+app.set("trust proxy", 1);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
